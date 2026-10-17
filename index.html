@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#f4f3ed">
+	<title>Entrelinhas — conversas</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--ink: #202c27;
+			--muted: #77817b;
+			--paper: #f4f3ed;
+			--surface: #fffefa;
+			--line: #e5e6de;
+			--green: #316e53;
+			--green-dark: #214b39;
+			--green-pale: #e5f1e8;
+			--coral: #d7795c;
+			--chat-wall: #eeeee6;
+			--shadow: 0 18px 60px #263c2e12;
+			font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			min-width: 320px;
+			min-height: 100vh;
+			margin: 0;
+			color: var(--ink);
+			background:
+				radial-gradient(ellipse at 8% 5%, #e1e9dc 0, transparent 27rem),
+				radial-gradient(ellipse at 92% 95%, #f2e8df 0, transparent 30rem),
+				var(--paper);
+		}
+
+		button, input { font: inherit; }
+		button { color: inherit; }
+
+		.app-shell { min-height: 100vh; padding: 0 5vw 5vw; }
+
+		.topbar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			min-height: 82px;
+			border-bottom: 1px solid #dfe2d9;
+		}
+
+		.brand { display: flex; align-items: center; gap: 12px; }
+		.brand-mark {
+			display: grid;
+			width: 36px;
+			height: 36px;
+			place-items: center;
+			border-radius: 12px 12px 12px 4px;
+			color: white;
+			background: var(--green);
+			font-size: 19px;
+		}
+		.brand-name { font-family: Georgia, "Times New Roman", serif; font-size: 20px; }
+		.brand-note { margin-left: 3px; color: var(--muted); font-size: 12px; }
+
+		.button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 9px;
+			min-height: 42px;
+			padding: 0 16px;
+			border: 1px solid transparent;
+			border-radius: 7px;
+			cursor: pointer;
+			transition: background .18s ease, border-color .18s ease, transform .18s ease;
+		}
+		.button:hover { transform: translateY(-1px); }
+		.button-primary { color: #fff; background: var(--green); }
+		.button-primary:hover { background: var(--green-dark); }
+		.button-quiet { border-color: var(--line); background: var(--surface); }
+		.button-quiet:hover { border-color: #b6c9b9; }
+		.button-icon { width: 42px; padding: 0; font-size: 20px; }
+
+		main { max-width: 1100px; margin: 0 auto; }
+		.home-view { padding: clamp(44px, 8vw, 92px) 0 40px; }
+		.eyebrow {
+			display: flex;
+			align-items: center;
+			gap: 9px;
+			color: var(--green);
+			font-size: 11px;
+			font-weight: 700;
+			text-transform: uppercase;
+		}
+		.eyebrow::before { width: 21px; height: 1px; background: var(--coral); content: ""; }
+		h1, h2, p { margin-top: 0; }
+		h1 {
+			max-width: 650px;
+			margin: 15px 0 14px;
+			font-family: Georgia, "Times New Roman", serif;
+			font-size: clamp(38px, 6vw, 64px);
+			font-weight: 400;
+			line-height: 1.06;
+		}
+		.intro { max-width: 490px; margin-bottom: 28px; color: #68746c; font-size: 15px; line-height: 1.7; }
+
+		.library-head {
+			display: flex;
+			align-items: end;
+			justify-content: space-between;
+			gap: 20px;
+			margin: 60px 0 17px;
+			padding-bottom: 14px;
+			border-bottom: 1px solid #dfe2d9;
+		}
+		.library-head h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 400; }
+		.library-count { color: var(--muted); font-size: 13px; }
+		.search-wrap { position: relative; width: min(100%, 280px); }
+		.search-wrap span { position: absolute; top: 50%; left: 12px; color: #818981; transform: translateY(-50%); }
+		.search-input {
+			width: 100%;
+			height: 40px;
+			padding: 0 12px 0 36px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			outline: none;
+			background: #fffefa;
+		}
+		.search-input:focus { border-color: #83a88e; box-shadow: 0 0 0 3px #316e5314; }
+
+		.chat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+		.chat-row {
+			display: flex;
+			align-items: center;
+			gap: 15px;
+			min-width: 0;
+			padding: 17px;
+			border: 1px solid #e7e7df;
+			border-radius: 8px;
+			text-align: left;
+			background: var(--surface);
+			cursor: pointer;
+			transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+		}
+		.chat-row:hover { transform: translateY(-2px); border-color: #b9cdbd; box-shadow: var(--shadow); }
+		.avatar {
+			display: grid;
+			flex: 0 0 48px;
+			width: 48px;
+			height: 48px;
+			place-items: center;
+			border-radius: 50%;
+			color: var(--green-dark);
+			background: var(--green-pale);
+			font-family: Georgia, "Times New Roman", serif;
+			font-size: 18px;
+		}
+		.chat-details { flex: 1; min-width: 0; }
+		.chat-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+		.chat-name { overflow: hidden; font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+		.chat-date { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
+		.chat-preview { overflow: hidden; margin: 5px 0 0; color: #78817a; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+		.empty-state { grid-column: 1 / -1; padding: 34px 20px; border: 1px dashed #cdd5ca; border-radius: 8px; color: var(--muted); text-align: center; }
+
+		.conversation-view { display: none; height: calc(100vh - 112px); min-height: 520px; margin: 16px auto 0; overflow: hidden; border: 1px solid #dfe2d9; border-radius: 9px; background: var(--surface); box-shadow: var(--shadow); }
+		.conversation-view.is-open { display: flex; flex-direction: column; }
+		.conversation-header { display: flex; align-items: center; gap: 13px; min-height: 76px; padding: 12px 19px; border-bottom: 1px solid var(--line); background: var(--surface); }
+		.conversation-title { flex: 1; min-width: 0; }
+		.conversation-title h2 { overflow: hidden; margin: 0 0 4px; font-size: 16px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+		.conversation-title p { margin: 0; color: var(--muted); font-size: 12px; }
+		.conversation-search { width: min(250px, 30vw); }
+		.message-scroll {
+			flex: 1;
+			overflow: auto;
+			padding: 20px clamp(14px, 5vw, 66px);
+			background-color: var(--chat-wall);
+			background-image: radial-gradient(#75887713 .7px, transparent .7px);
+			background-size: 13px 13px;
+			scroll-behavior: smooth;
+		}
+		.message-list { display: flex; flex-direction: column; gap: 8px; max-width: 760px; margin: 0 auto; }
+		.date-divider { align-self: center; margin: 12px 0; padding: 6px 12px; border: 1px solid #e1e4dc; border-radius: 5px; color: #66736a; background: #fffefaed; font-size: 11px; }
+		.message { display: flex; width: 100%; }
+		.message.outgoing { justify-content: flex-end; }
+		.bubble { max-width: min(75%, 540px); padding: 9px 11px 7px; border: 1px solid #e7e8e0; border-radius: 4px 12px 12px 12px; background: #fffefa; box-shadow: 0 1px 1px #24352b0b; }
+		.outgoing .bubble { border-color: #d6e6d9; border-radius: 12px 4px 12px 12px; background: #e5f1e8; }
+		.sender { margin-bottom: 4px; color: #a25d49; font-size: 12px; font-weight: 650; }
+		.message-text { overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+		.message-text a { color: #326b86; text-decoration: underline; text-underline-offset: 2px; }
+		.message-time { margin-top: 5px; color: #838c85; font-size: 10px; text-align: right; }
+		.attachment { margin-top: 7px; }
+		.attachment img, .attachment video { display: block; width: auto; max-width: 100%; max-height: 340px; border-radius: 5px; object-fit: contain; }
+		.attachment audio { display: block; width: min(300px, 66vw); height: 42px; }
+		.file-link { display: flex; align-items: center; gap: 11px; min-width: min(260px, 60vw); padding: 11px; border: 1px solid #dce2d9; border-radius: 6px; color: var(--ink); text-decoration: none; background: #fffefa; }
+		.file-icon { display: grid; flex: 0 0 34px; width: 34px; height: 38px; place-items: center; border-radius: 4px; color: var(--green); background: var(--green-pale); font-size: 10px; font-weight: 700; }
+		.file-meta { min-width: 0; }
+		.file-name { display: block; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
+		.file-hint { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+		.missing-file { color: #856d64; font-size: 12px; }
+		.load-older { align-self: center; margin: 0 0 15px; }
+		.conversation-footer { display: flex; justify-content: center; padding: 11px; border-top: 1px solid var(--line); color: var(--muted); background: var(--surface); font-size: 11px; }
+		.toast { position: fixed; right: 22px; bottom: 22px; z-index: 5; max-width: min(420px, calc(100vw - 44px)); padding: 13px 17px; border-radius: 6px; color: #fff; background: #28372f; box-shadow: var(--shadow); font-size: 13px; }
+		.toast[hidden] { display: none; }
+		.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+		@media (max-width: 700px) {
+			.app-shell { padding: 0 18px 24px; }
+			.topbar { min-height: 68px; }
+			.brand-note { display: none; }
+			.topbar .button { min-height: 38px; padding: 0 11px; font-size: 13px; }
+			.home-view { padding-top: 48px; }
+			.library-head { align-items: stretch; flex-direction: column; margin-top: 42px; }
+			.search-wrap { width: 100%; }
+			.chat-list { grid-template-columns: 1fr; }
+			.conversation-view { position: fixed; inset: 0; z-index: 2; width: 100%; height: 100dvh; min-height: 0; margin: 0; border: 0; border-radius: 0; }
+			.conversation-header { gap: 9px; min-height: 67px; padding: 9px 12px; }
+			.conversation-header .avatar { flex-basis: 40px; width: 40px; height: 40px; }
+			.conversation-title h2 { font-size: 14px; }
+			.conversation-search { width: 40px; padding: 0; }
+			.conversation-search:focus { width: min(155px, 35vw); padding: 0 8px 0 31px; }
+			.message-scroll { padding: 14px 11px; }
+			.bubble { max-width: 86%; }
+			.attachment img, .attachment video { max-height: 280px; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+		}
+	</style>
+</head>
+<body>
+	<div class="app-shell">
+		<header class="topbar">
+			<div class="brand" aria-label="Entrelinhas">
+				<span class="brand-mark" aria-hidden="true">e</span>
+				<span class="brand-name">entrelinhas</span>
+				<span class="brand-note">arquivo de conversas</span>
+			</div>
+			<button class="button button-quiet" id="choose-folder" type="button"><span aria-hidden="true">＋</span> Abrir pasta Chats</button>
+		</header>
+
+		<main>
+			<section class="home-view" id="home-view">
+				<div class="eyebrow">Seu arquivo, em outro ritmo</div>
+				<h1>Conversas, com contexto.</h1>
+				<p class="intro">Um lugar tranquilo para revisitar suas mensagens e os arquivos que vieram com elas.</p>
+				<button class="button button-primary" id="choose-folder-main" type="button">＋ &nbsp;Selecionar pasta Chats</button>
+				<input class="visually-hidden" id="folder-input" type="file" webkitdirectory multiple aria-label="Selecionar pasta Chats">
+
+				<div class="library-head">
+					<h2>Conversas <span class="library-count" id="chat-count"></span></h2>
+					<label class="search-wrap">
+						<span aria-hidden="true">⌕</span>
+						<input class="search-input" id="chat-search" type="search" placeholder="Buscar conversa" autocomplete="off" aria-label="Buscar conversa">
+					</label>
+				</div>
+				<div class="chat-list" id="chat-list" aria-live="polite">
+					<div class="empty-state">Selecione a pasta Chats para abrir suas conversas.</div>
+				</div>
+			</section>
+
+			<section class="conversation-view" id="conversation-view" aria-label="Conversa">
+				<header class="conversation-header">
+					<button class="button button-quiet button-icon" id="back-button" type="button" aria-label="Voltar às conversas" title="Voltar às conversas">‹</button>
+					<div class="avatar" id="conversation-avatar" aria-hidden="true"></div>
+					<div class="conversation-title">
+						<h2 id="conversation-name"></h2>
+						<p id="conversation-count"></p>
+					</div>
+					<label class="search-wrap conversation-search">
+						<span aria-hidden="true">⌕</span>
+						<input class="search-input" id="message-search" type="search" placeholder="Buscar mensagens" autocomplete="off" aria-label="Buscar mensagens">
+					</label>
+				</header>
+				<div class="message-scroll" id="message-scroll">
+					<div class="message-list" id="message-list"></div>
+				</div>
+				<footer class="conversation-footer">As mensagens permanecem neste dispositivo.</footer>
+			</section>
+		</main>
+	</div>
+	<div class="toast" id="toast" role="status" hidden></div>
+
+	<script>
+		const state = { chats: [], currentChat: null, visibleCount: 100, objectUrls: new Set() };
+		const folderInput = document.querySelector("#folder-input");
+		const chatList = document.querySelector("#chat-list");
+		const toast = document.querySelector("#toast");
+		let toastTimer;
+
+		document.querySelector("#choose-folder").addEventListener("click", () => folderInput.click());
+		document.querySelector("#choose-folder-main").addEventListener("click", () => folderInput.click());
+		document.querySelector("#back-button").addEventListener("click", closeChat);
+		document.querySelector("#chat-search").addEventListener("input", renderChatList);
+		document.querySelector("#message-search").addEventListener("input", () => {
+			state.visibleCount = 100;
+			renderMessages();
+		});
+		folderInput.addEventListener("change", loadFolder);
+
+		function showToast(message) {
+			toast.textContent = message;
+			toast.hidden = false;
+			clearTimeout(toastTimer);
+			toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
+		}
+
+		async function loadFolder(event) {
+			const files = Array.from(event.target.files || []);
+			const fileIndex = new Map();
+			for (const file of files) {
+				const path = file.webkitRelativePath || file.name;
+				fileIndex.set(path.toLocaleLowerCase(), file);
+			}
+
+			const chatFiles = files.filter(file => file.name.toLocaleLowerCase() === "_chat.txt");
+			if (!chatFiles.length) {
+				showToast("Não encontrei nenhum arquivo _chat.txt nessa seleção.");
+				return;
+			}
+
+			const chats = await Promise.all(chatFiles.map(async file => {
+				const parts = (file.webkitRelativePath || file.name).split("/");
+				const folderName = parts.length > 1 ? parts[parts.length - 2] : "Conversa";
+				const folderPath = parts.slice(0, -1).join("/");
+				const text = await file.text();
+				const messages = parseChat(text);
+				const mediaFiles = new Map();
+				const folderPrefix = `${folderPath}/`.toLocaleLowerCase();
+				for (const [path, mediaFile] of fileIndex) {
+					if (path.startsWith(folderPrefix)) mediaFiles.set(path.slice(folderPrefix.length), mediaFile);
+				}
+				return {
+					name: folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, ""),
+					folderName,
+					folderPath,
+					messages,
+					mediaFiles,
+					lastDate: messages.length ? messages[messages.length - 1].date : null
+				};
+			}));
+
+			state.chats = chats.sort((first, second) => first.name.localeCompare(second.name, "pt-BR"));
+			document.querySelector("#chat-count").textContent = `· ${state.chats.length}`;
+			renderChatList();
+			showToast(`${state.chats.length} ${state.chats.length === 1 ? "conversa carregada" : "conversas carregadas"}.`);
+		}
+
+		function parseChat(text) {
+			const messages = [];
+			const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+			const messageStart = /^[\u200e\u200f\u202a-\u202e]*\[(\d{1,2}\/\d{1,2}\/\d{4}), (\d{1,2}:\d{2}:\d{2})\]\s(.*)$/;
+			for (const line of lines) {
+				const match = line.match(messageStart);
+				if (!match) {
+					if (messages.length && line) messages[messages.length - 1].text += `\n${line}`;
+					continue;
+				}
+				const [, dateText, time, remainder] = match;
+				const senderSplit = remainder.match(/^([^:]+):\s?(.*)$/);
+				const sender = senderSplit ? senderSplit[1].trim() : "";
+				const body = senderSplit ? senderSplit[2] : remainder;
+				const attachments = [...body.matchAll(/<anexado:\s*([^>]+)>/gi)].map(item => item[1].trim());
+				const cleanText = body.replace(/<anexado:\s*[^>]+>/gi, "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").trim();
+				const [day, month, year] = dateText.split("/").map(Number);
+				const [hour, minute, second] = time.split(":").map(Number);
+				messages.push({
+					sender,
+					text: cleanText,
+					attachments,
+					time,
+					date: new Date(year, month - 1, day, hour, minute, second),
+					dateLabel: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+				});
+			}
+			return messages;
+		}
+
+		function renderChatList() {
+			const query = document.querySelector("#chat-search").value.trim().toLocaleLowerCase();
+			const visibleChats = state.chats.filter(chat => {
+				const preview = chat.messages.at(-1)?.text || "";
+				return `${chat.name} ${preview}`.toLocaleLowerCase().includes(query);
+			});
+			chatList.replaceChildren();
+			if (!visibleChats.length) {
+				const empty = document.createElement("div");
+				empty.className = "empty-state";
+				empty.textContent = state.chats.length ? "Nenhuma conversa encontrada." : "Selecione a pasta Chats para abrir suas conversas.";
+				chatList.append(empty);
+				return;
+			}
+			for (const chat of visibleChats) {
+				const row = document.createElement("button");
+				row.type = "button";
+				row.className = "chat-row";
+				const avatar = document.createElement("span");
+				avatar.className = "avatar";
+				avatar.textContent = initials(chat.name);
+				const details = document.createElement("span");
+				details.className = "chat-details";
+				const top = document.createElement("span");
+				top.className = "chat-row-top";
+				const name = document.createElement("span");
+				name.className = "chat-name";
+				name.textContent = chat.name;
+				const date = document.createElement("span");
+				date.className = "chat-date";
+				date.textContent = chat.lastDate ? formatDate(chat.lastDate) : "";
+				const preview = document.createElement("span");
+				preview.className = "chat-preview";
+				const lastMessage = chat.messages.at(-1);
+				preview.textContent = lastMessage ? `${lastMessage.sender ? `${lastMessage.sender}: ` : ""}${lastMessage.text || (lastMessage.attachments.length ? "Anexo" : "Mensagem")}` : "Conversa vazia";
+				top.append(name, date);
+				details.append(top, preview);
+				row.append(avatar, details);
+				row.addEventListener("click", () => openChat(chat));
+				chatList.append(row);
+			}
+		}
+
+		function initials(name) {
+			return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toLocaleUpperCase("pt-BR");
+		}
+
+		function formatDate(date) {
+			return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+		}
+
+		function openChat(chat) {
+			state.currentChat = chat;
+			state.visibleCount = 100;
+			document.querySelector("#conversation-name").textContent = chat.name;
+			document.querySelector("#conversation-avatar").textContent = initials(chat.name);
+			document.querySelector("#conversation-count").textContent = `${chat.messages.length.toLocaleString("pt-BR")} mensagens`;
+			document.querySelector("#message-search").value = "";
+			document.querySelector("#home-view").hidden = true;
+			document.querySelector("#conversation-view").classList.add("is-open");
+			renderMessages();
+			const scroll = document.querySelector("#message-scroll");
+			scroll.scrollTop = scroll.scrollHeight;
+		}
+
+		function closeChat() {
+			document.querySelector("#conversation-view").classList.remove("is-open");
+			document.querySelector("#home-view").hidden = false;
+			state.currentChat = null;
+			for (const url of state.objectUrls) URL.revokeObjectURL(url);
+			state.objectUrls.clear();
+			document.querySelector("#message-list").replaceChildren();
+		}
+
+		function renderMessages() {
+			const chat = state.currentChat;
+			if (!chat) return;
+			const list = document.querySelector("#message-list");
+			const scroll = document.querySelector("#message-scroll");
+			const query = document.querySelector("#message-search").value.trim().toLocaleLowerCase();
+			const filtered = query ? chat.messages.filter(message => `${message.sender} ${message.text} ${message.attachments.join(" ")}`.toLocaleLowerCase().includes(query)) : chat.messages;
+			const startIndex = Math.max(0, filtered.length - state.visibleCount);
+			const visible = filtered.slice(startIndex);
+			list.replaceChildren();
+
+			if (startIndex > 0 && !query) {
+				const older = document.createElement("button");
+				older.className = "button button-quiet load-older";
+				older.type = "button";
+				older.textContent = "Carregar mensagens anteriores";
+				older.addEventListener("click", () => {
+					const previousHeight = scroll.scrollHeight;
+					state.visibleCount += 100;
+					renderMessages();
+					scroll.scrollTop += scroll.scrollHeight - previousHeight;
+				});
+				list.append(older);
+			}
+
+			let previousDate = "";
+			for (const message of visible) {
+				if (message.dateLabel !== previousDate) {
+					const divider = document.createElement("div");
+					divider.className = "date-divider";
+					divider.textContent = formatDate(message.date);
+					list.append(divider);
+					previousDate = message.dateLabel;
+				}
+				list.append(renderMessage(chat, message));
+			}
+			if (!visible.length) {
+				const empty = document.createElement("div");
+				empty.className = "date-divider";
+				empty.textContent = "Nenhuma mensagem encontrada.";
+				list.append(empty);
+			}
+			document.querySelector("#conversation-count").textContent = query
+				? `${filtered.length.toLocaleString("pt-BR")} resultados`
+				: `${chat.messages.length.toLocaleString("pt-BR")} mensagens`;
+		}
+
+		function renderMessage(chat, message) {
+			const article = document.createElement("article");
+			const isContact = message.sender && message.sender.toLocaleLowerCase() === chat.name.toLocaleLowerCase();
+			article.className = `message${isContact ? "" : " outgoing"}`;
+			const bubble = document.createElement("div");
+			bubble.className = "bubble";
+			if (message.sender && !isContact) {
+				const sender = document.createElement("div");
+				sender.className = "sender";
+				sender.textContent = message.sender;
+				bubble.append(sender);
+			}
+			if (message.text) {
+				const text = document.createElement("div");
+				text.className = "message-text";
+				appendLinkedText(text, message.text);
+				bubble.append(text);
+			}
+			for (const name of message.attachments) bubble.append(renderAttachment(chat, name));
+			const time = document.createElement("div");
+			time.className = "message-time";
+			time.textContent = message.time;
+			bubble.append(time);
+			article.append(bubble);
+			return article;
+		}
+
+		function appendLinkedText(container, text) {
+			const linkPattern = /(https?:\/\/[^\s<]+)/gi;
+			let cursor = 0;
+			for (const match of text.matchAll(linkPattern)) {
+				container.append(document.createTextNode(text.slice(cursor, match.index)));
+				const link = document.createElement("a");
+				link.href = match[0].replace(/[.,!?;:]+$/, "");
+				link.textContent = match[0];
+				link.target = "_blank";
+				link.rel = "noopener noreferrer";
+				container.append(link);
+				cursor = match.index + match[0].length;
+			}
+			container.append(document.createTextNode(text.slice(cursor)));
+		}
+
+		function renderAttachment(chat, name) {
+			const wrapper = document.createElement("div");
+			wrapper.className = "attachment";
+			const file = chat.mediaFiles.get(name.toLocaleLowerCase());
+			if (!file) {
+				const missing = document.createElement("span");
+				missing.className = "missing-file";
+				missing.textContent = `Arquivo não encontrado: ${name}`;
+				wrapper.append(missing);
+				return wrapper;
+			}
+			const url = URL.createObjectURL(file);
+			state.objectUrls.add(url);
+			const extension = name.split(".").pop().toLocaleLowerCase();
+			let media;
+			if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(extension)) {
+				media = document.createElement("img");
+				media.alt = name;
+				media.loading = "lazy";
+				media.src = url;
+			} else if (["mp4", "mov", "webm", "m4v"].includes(extension)) {
+				media = document.createElement("video");
+				media.controls = true;
+				media.preload = "metadata";
+				media.playsInline = true;
+				media.src = url;
+			} else if (["opus", "ogg", "mp3", "m4a", "aac", "wav"].includes(extension)) {
+				media = document.createElement("audio");
+				media.controls = true;
+				media.preload = "metadata";
+				media.src = url;
+			}
+			if (media) {
+				wrapper.append(media);
+				return wrapper;
+			}
+
+			const link = document.createElement("a");
+			link.className = "file-link";
+			link.href = url;
+			link.download = name;
+			const icon = document.createElement("span");
+			icon.className = "file-icon";
+			icon.textContent = extension.slice(0, 4).toLocaleUpperCase();
+			const meta = document.createElement("span");
+			meta.className = "file-meta";
+			const title = document.createElement("span");
+			title.className = "file-name";
+			title.textContent = name;
+			const hint = document.createElement("span");
+			hint.className = "file-hint";
+			hint.textContent = `${formatSize(file.size)} · baixar arquivo`;
+			meta.append(title, hint);
+			link.append(icon, meta);
+			wrapper.append(link);
+			return wrapper;
+		}
+
+		function formatSize(bytes) {
+			if (bytes < 1024) return `${bytes} B`;
+			const units = ["KB", "MB", "GB"];
+			let size = bytes / 1024;
+			let unit = 0;
+			while (size >= 1024 && unit < units.length - 1) {
+				size /= 1024;
+				unit++;
+			}
+			return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unit]}`;
+		}
+	</script>
+</body>
+</html>
