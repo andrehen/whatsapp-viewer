@@ -512,7 +512,10 @@
 		let previousGalleryBodyOverflow = "";
 		let previousVideoFocus = null;
 		let previousVideoBodyOverflow = "";
+		let videoViewerObjectUrl = null;
 		let galleryObjectUrls = new Set();
+		let galleryMediaObserver = null;
+		const galleryMediaFiles = new WeakMap();
 		let toastTimer;
 
 		function setViewerZoom(scale) {
@@ -569,8 +572,8 @@
 			if (!chat) return;
 			previousGalleryFocus = document.activeElement;
 			previousGalleryBodyOverflow = document.body.style.overflow;
-			renderMediaGallery(chat);
 			mediaGallery.hidden = false;
+			renderMediaGallery(chat);
 			document.body.style.overflow = "hidden";
 			document.querySelector("#media-gallery-close").focus();
 		}
@@ -584,7 +587,13 @@
 		}
 
 		function clearMediaGalleryItems() {
-			for (const audio of mediaGalleryList.querySelectorAll("audio")) audio.pause();
+			galleryMediaObserver?.disconnect();
+			galleryMediaObserver = null;
+			for (const media of mediaGalleryList.querySelectorAll("audio, video")) {
+				media.pause();
+				media.removeAttribute("src");
+				media.load();
+			}
 			for (const url of galleryObjectUrls) {
 				URL.revokeObjectURL(url);
 				state.objectUrls.delete(url);
@@ -593,17 +602,71 @@
 			mediaGalleryList.replaceChildren();
 		}
 
-		function openVideoViewer(src, name) {
+		function createGalleryObjectUrl(file) {
+			const url = URL.createObjectURL(file);
+			state.objectUrls.add(url);
+			galleryObjectUrls.add(url);
+			return url;
+		}
+
+		function loadGalleryMedia(media) {
+			if (media.dataset.galleryUrl) return;
+			const file = galleryMediaFiles.get(media);
+			if (!file) return;
+			const url = createGalleryObjectUrl(file);
+			media.dataset.galleryUrl = url;
+			media.preload = "metadata";
+			media.src = url;
+			media.load();
+		}
+
+		function unloadGalleryMedia(media) {
+			if (media instanceof HTMLAudioElement && !media.paused) return;
+			const url = media.dataset.galleryUrl;
+			if (!url) return;
+			media.pause();
+			media.removeAttribute("src");
+			media.load();
+			delete media.dataset.galleryUrl;
+			URL.revokeObjectURL(url);
+			galleryObjectUrls.delete(url);
+			state.objectUrls.delete(url);
+		}
+
+		function observeGalleryMedia(media, file) {
+			galleryMediaFiles.set(media, file);
+			if (!galleryMediaObserver && "IntersectionObserver" in window) {
+				galleryMediaObserver = new IntersectionObserver(entries => {
+					for (const entry of entries) {
+						entry.target.dataset.galleryInRange = String(entry.isIntersecting);
+						if (entry.isIntersecting) loadGalleryMedia(entry.target);
+						else unloadGalleryMedia(entry.target);
+					}
+				}, { root: mediaGalleryList, rootMargin: "400px 0px" });
+			}
+			if (galleryMediaObserver) galleryMediaObserver.observe(media);
+			else loadGalleryMedia(media);
+			if (media instanceof HTMLAudioElement) {
+				media.addEventListener("pause", () => {
+					if (media.dataset.galleryInRange !== "true") unloadGalleryMedia(media);
+				});
+			}
+		}
+
+		function openVideoViewer(file, name) {
 			previousVideoFocus = document.activeElement;
 			previousVideoBodyOverflow = document.body.style.overflow;
+			videoViewerObjectUrl = URL.createObjectURL(file);
+			state.objectUrls.add(videoViewerObjectUrl);
 			document.querySelector("#video-viewer-caption").textContent = name;
 			const download = document.querySelector("#video-viewer-download");
-			download.href = src;
+			download.href = videoViewerObjectUrl;
 			download.download = name;
-			videoViewerPlayer.src = src;
+			videoViewerPlayer.src = videoViewerObjectUrl;
 			videoViewer.hidden = false;
 			document.body.style.overflow = "hidden";
 			document.querySelector("#video-viewer-close").focus();
+			videoViewerPlayer.load();
 			videoViewerPlayer.play().catch(() => {});
 		}
 
@@ -613,6 +676,11 @@
 			videoViewerPlayer.pause();
 			videoViewerPlayer.removeAttribute("src");
 			videoViewerPlayer.load();
+			if (videoViewerObjectUrl) {
+				URL.revokeObjectURL(videoViewerObjectUrl);
+				state.objectUrls.delete(videoViewerObjectUrl);
+				videoViewerObjectUrl = null;
+			}
 			document.body.style.overflow = previousVideoBodyOverflow;
 			if (previousVideoFocus?.isConnected) previousVideoFocus.focus();
 		}
@@ -1145,10 +1213,8 @@
 					missing.textContent = `Arquivo não encontrado: ${item.name}`;
 					card.append(missing);
 				} else {
-					const url = URL.createObjectURL(file);
-					state.objectUrls.add(url);
-					galleryObjectUrls.add(url);
 					if (item.type === "image") {
+						const url = createGalleryObjectUrl(file);
 						const button = document.createElement("button");
 						button.className = "media-gallery-open";
 						button.type = "button";
@@ -1166,21 +1232,21 @@
 						button.type = "button";
 						button.setAttribute("aria-label", `Reproduzir vídeo: ${item.name}`);
 						const video = document.createElement("video");
-						video.src = url;
-						video.preload = "metadata";
+						video.preload = "none";
 						video.muted = true;
 						video.playsInline = true;
 						button.append(video);
-						button.addEventListener("click", () => openVideoViewer(url, item.name));
+						observeGalleryMedia(video, file);
+						button.addEventListener("click", () => openVideoViewer(file, item.name));
 						card.append(button);
 					} else {
 						const audioWrap = document.createElement("div");
 						audioWrap.className = "media-gallery-audio";
 						const audio = document.createElement("audio");
 						audio.controls = true;
-						audio.preload = "metadata";
-						audio.src = url;
+						audio.preload = "none";
 						audioWrap.append(audio);
+						observeGalleryMedia(audio, file);
 						card.append(audioWrap);
 					}
 				}
