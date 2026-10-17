@@ -276,6 +276,8 @@
 		.message-time { margin-top: 5px; color: var(--message-time); font-size: 10px; text-align: right; }
 		.attachment { margin-top: 7px; }
 		.attachment img, .attachment video { display: block; width: auto; max-width: 100%; max-height: 340px; border-radius: 5px; object-fit: contain; }
+		.attachment img[role="button"] { cursor: zoom-in; }
+		.attachment img[role="button"]:focus-visible { outline: 3px solid var(--focus-border); outline-offset: 3px; }
 		.attachment audio { display: block; width: min(300px, 66vw); height: 42px; }
 		.file-link { display: flex; align-items: center; gap: 11px; min-width: min(260px, 60vw); padding: 11px; border: 1px solid var(--file-border); border-radius: 6px; color: var(--ink); text-decoration: none; background: var(--input-surface); }
 		.file-icon { display: grid; flex: 0 0 34px; width: 34px; height: 38px; place-items: center; border-radius: 4px; color: var(--green); background: var(--green-pale); font-size: 10px; font-weight: 700; }
@@ -285,6 +287,20 @@
 		.missing-file { color: var(--missing-file); font-size: 12px; }
 		.load-older { align-self: center; margin: 0 0 15px; }
 		.conversation-footer { display: flex; justify-content: center; padding: 11px; border-top: 1px solid var(--line); color: var(--muted); background: var(--surface); font-size: 11px; }
+		.image-viewer[hidden] { display: none; }
+		.image-viewer { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 14px; padding: clamp(10px, 2.5vw, 28px); color: #fff; background: #101411ed; backdrop-filter: blur(5px); }
+		.image-viewer-toolbar { display: flex; align-items: center; gap: 12px; width: min(100%, 1200px); min-width: 0; margin: 0 auto; }
+		.image-viewer-caption { flex: 1; min-width: 0; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+		.image-viewer-controls { display: flex; align-items: center; gap: 6px; }
+		.image-viewer-button { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border: 1px solid #ffffff38; border-radius: 6px; color: #fff; background: #ffffff12; cursor: pointer; font-size: 20px; }
+		.image-viewer-button:hover { background: #ffffff28; }
+		.image-viewer-button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+		.image-viewer-button.close { font-size: 26px; }
+		.image-viewer-zoom { min-width: 54px; color: #e3e9e4; font-size: 12px; font-variant-numeric: tabular-nums; text-align: center; }
+		.image-viewer-stage { display: flex; min-width: 0; min-height: 0; align-items: center; justify-content: center; overflow: auto; overscroll-behavior: contain; }
+		.image-viewer-image { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; border-radius: 2px; object-fit: contain; transform: scale(1); transform-origin: center; user-select: none; -webkit-user-drag: none; }
+		.image-viewer-image.is-pannable { cursor: grab; touch-action: none; }
+		.image-viewer-image.is-panning { cursor: grabbing; }
 		.toast { position: fixed; right: 22px; bottom: 22px; z-index: 5; max-width: min(420px, calc(100vw - 44px)); padding: 13px 17px; border-radius: 6px; color: #fff; background: #28372f; box-shadow: var(--shadow); font-size: 13px; }
 		.toast[hidden] { display: none; }
 		.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
@@ -315,6 +331,12 @@
 			.message-scroll { padding: 14px 11px; }
 			.bubble { max-width: 86%; }
 			.attachment img, .attachment video { max-height: 280px; }
+			.image-viewer { gap: 9px; padding: 10px; }
+			.image-viewer-toolbar { gap: 6px; }
+			.image-viewer-caption { font-size: 11px; }
+			.image-viewer-controls { gap: 4px; }
+			.image-viewer-button { flex-basis: 36px; width: 36px; height: 36px; }
+			.image-viewer-zoom { min-width: 43px; font-size: 11px; }
 		}
 		@media (max-width: 360px) {
 			.brand { gap: 8px; }
@@ -393,6 +415,22 @@
 		</main>
 	</div>
 	<div class="toast" id="toast" role="status" hidden></div>
+	<div class="image-viewer" id="image-viewer" role="dialog" aria-modal="true" aria-labelledby="image-viewer-caption" hidden>
+		<div class="image-viewer-toolbar">
+			<div class="image-viewer-caption" id="image-viewer-caption"></div>
+			<div class="image-viewer-controls">
+				<a class="image-viewer-button" id="image-viewer-download" href="#" download title="Baixar imagem" aria-label="Baixar imagem">↓</a>
+				<button class="image-viewer-button" id="image-viewer-fit" type="button" title="Ajustar à tela" aria-label="Ajustar imagem à tela">⤢</button>
+				<button class="image-viewer-button" id="image-viewer-zoom-out" type="button" title="Diminuir zoom" aria-label="Diminuir zoom">−</button>
+				<output class="image-viewer-zoom" id="image-viewer-zoom" aria-live="polite">100%</output>
+				<button class="image-viewer-button" id="image-viewer-zoom-in" type="button" title="Aumentar zoom" aria-label="Aumentar zoom">＋</button>
+				<button class="image-viewer-button close" id="image-viewer-close" type="button" title="Fechar" aria-label="Fechar imagem">×</button>
+			</div>
+		</div>
+		<div class="image-viewer-stage" id="image-viewer-stage">
+			<img class="image-viewer-image" id="image-viewer-image" alt="" draggable="false">
+		</div>
+	</div>
 
 	<script>
 		const state = { chats: [], currentChat: null, visibleCount: 100, objectUrls: new Set(), dayNavigationId: 0 };
@@ -400,7 +438,119 @@
 		const chatList = document.querySelector("#chat-list");
 		const toast = document.querySelector("#toast");
 		const themeToggle = document.querySelector("#theme-toggle");
+		const imageViewer = document.querySelector("#image-viewer");
+		const imageViewerImage = document.querySelector("#image-viewer-image");
+		const imageViewerStage = document.querySelector("#image-viewer-stage");
+		const imageViewerZoom = document.querySelector("#image-viewer-zoom");
+		let viewerScale = 1;
+		let viewerOffsetX = 0;
+		let viewerOffsetY = 0;
+		let viewerPan = null;
+		let previousViewerFocus = null;
+		let previousBodyOverflow = "";
 		let toastTimer;
+
+		function setViewerZoom(scale) {
+			viewerScale = Math.min(4, Math.max(0.25, scale));
+			if (viewerScale <= 1) {
+				viewerOffsetX = 0;
+				viewerOffsetY = 0;
+			}
+			imageViewerImage.style.transformOrigin = "center";
+			updateViewerImageTransform();
+			imageViewerImage.classList.toggle("is-pannable", viewerScale > 1);
+			imageViewerZoom.value = `${Math.round(viewerScale * 100)}%`;
+			imageViewerZoom.textContent = imageViewerZoom.value;
+		}
+
+		function updateViewerImageTransform() {
+			imageViewerImage.style.transform = `translate3d(${viewerOffsetX}px, ${viewerOffsetY}px, 0) scale(${viewerScale})`;
+		}
+
+		function stopViewerPan(event) {
+			if (!viewerPan || viewerPan.pointerId !== event.pointerId) return;
+			viewerPan = null;
+			imageViewerImage.classList.remove("is-panning");
+			if (imageViewerImage.hasPointerCapture(event.pointerId)) imageViewerImage.releasePointerCapture(event.pointerId);
+		}
+
+		function openImageViewer(src, name) {
+			previousViewerFocus = document.activeElement;
+			previousBodyOverflow = document.body.style.overflow;
+			imageViewerImage.src = src;
+			imageViewerImage.alt = name;
+			imageViewerStage.scrollLeft = 0;
+			imageViewerStage.scrollTop = 0;
+			document.querySelector("#image-viewer-caption").textContent = name;
+			const download = document.querySelector("#image-viewer-download");
+			download.href = src;
+			download.download = name;
+			setViewerZoom(1);
+			imageViewer.hidden = false;
+			document.body.style.overflow = "hidden";
+			document.querySelector("#image-viewer-close").focus();
+		}
+
+		function closeImageViewer() {
+			if (imageViewer.hidden) return;
+			imageViewer.hidden = true;
+			imageViewerImage.removeAttribute("src");
+			document.body.style.overflow = previousBodyOverflow;
+			if (previousViewerFocus?.isConnected) previousViewerFocus.focus();
+		}
+
+		document.querySelector("#image-viewer-close").addEventListener("click", closeImageViewer);
+		document.querySelector("#image-viewer-fit").addEventListener("click", () => setViewerZoom(1));
+		document.querySelector("#image-viewer-zoom-out").addEventListener("click", () => setViewerZoom(viewerScale - 0.25));
+		document.querySelector("#image-viewer-zoom-in").addEventListener("click", () => setViewerZoom(viewerScale + 0.25));
+		imageViewerImage.addEventListener("pointerdown", event => {
+			if (event.button !== 0 || viewerScale <= 1) return;
+			event.preventDefault();
+			viewerPan = {
+				pointerId: event.pointerId,
+				clientX: event.clientX,
+				clientY: event.clientY,
+				offsetX: viewerOffsetX,
+				offsetY: viewerOffsetY
+			};
+			imageViewerImage.classList.add("is-panning");
+			imageViewerImage.setPointerCapture(event.pointerId);
+		});
+		imageViewerImage.addEventListener("pointermove", event => {
+			if (!viewerPan || viewerPan.pointerId !== event.pointerId) return;
+			viewerOffsetX = viewerPan.offsetX + event.clientX - viewerPan.clientX;
+			viewerOffsetY = viewerPan.offsetY + event.clientY - viewerPan.clientY;
+			updateViewerImageTransform();
+		});
+		imageViewerImage.addEventListener("pointerup", stopViewerPan);
+		imageViewerImage.addEventListener("pointercancel", stopViewerPan);
+		imageViewerImage.addEventListener("lostpointercapture", stopViewerPan);
+		imageViewer.addEventListener("click", event => {
+			if (event.target === imageViewer || event.target === imageViewerStage) closeImageViewer();
+		});
+		imageViewerStage.addEventListener("wheel", event => {
+			event.preventDefault();
+			setViewerZoom(viewerScale + (event.deltaY < 0 ? 0.1 : -0.1));
+		}, { passive: false });
+		document.addEventListener("keydown", event => {
+			if (imageViewer.hidden) return;
+			if (event.key === "Escape") {
+				event.preventDefault();
+				closeImageViewer();
+				return;
+			}
+			if (event.key !== "Tab") return;
+			const focusable = [...imageViewer.querySelectorAll("a[href], button:not(:disabled)")];
+			const first = focusable[0];
+			const last = focusable.at(-1);
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		});
 
 		function setTheme(theme, persist = true) {
 			const isDark = theme === "dark";
@@ -832,6 +982,16 @@
 				media.alt = name;
 				media.loading = "lazy";
 				media.src = url;
+				media.tabIndex = 0;
+				media.setAttribute("role", "button");
+				media.setAttribute("aria-label", `Abrir imagem em tamanho maior: ${name}`);
+				media.addEventListener("click", () => openImageViewer(url, name));
+				media.addEventListener("keydown", event => {
+					if (event.key === "Enter" || event.key === " ") {
+						event.preventDefault();
+						openImageViewer(url, name);
+					}
+				});
 			} else if (["mp4", "mov", "webm", "m4v"].includes(extension)) {
 				media = document.createElement("video");
 				media.controls = true;
