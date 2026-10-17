@@ -246,8 +246,17 @@
 		.conversation-title h2 { overflow: hidden; margin: 0 0 4px; font-size: 16px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 		.conversation-title p { margin: 0; color: var(--muted); font-size: 12px; }
 		.conversation-search { width: min(250px, 30vw); }
+		.conversation-body { display: grid; flex: 1; min-height: 0; grid-template-columns: 220px minmax(0, 1fr); }
+		.day-index { min-width: 0; overflow: auto; padding: 15px 10px; border-right: 1px solid var(--line); background: var(--surface); }
+		.day-index-title { margin: 0 0 9px 8px; color: var(--muted); font-size: 11px; font-weight: 650; }
+		.day-index-list { display: flex; flex-direction: column; gap: 2px; }
+		.day-index-button { width: 100%; min-height: 34px; padding: 7px 8px; border: 0; border-radius: 4px; color: var(--subtle-text); background: transparent; cursor: pointer; font-size: 12px; text-align: left; white-space: nowrap; }
+		.day-index-button:hover { color: var(--ink); background: var(--chat-wall); }
+		.day-index-button[aria-current="date"] { color: var(--green-dark); background: var(--green-pale); font-weight: 650; }
 		.message-scroll {
 			flex: 1;
+			min-width: 0;
+			min-height: 0;
 			overflow: auto;
 			padding: 20px clamp(14px, 5vw, 66px);
 			background-color: var(--chat-wall);
@@ -298,6 +307,11 @@
 			.conversation-title h2 { font-size: 14px; }
 			.conversation-search { width: 40px; padding: 0; }
 			.conversation-search:focus { width: min(155px, 35vw); padding: 0 8px 0 31px; }
+			.conversation-body { display: flex; flex-direction: column; }
+			.day-index { flex: 0 0 74px; overflow-x: auto; overflow-y: hidden; padding: 7px 10px; border-right: 0; border-bottom: 1px solid var(--line); }
+			.day-index-title { margin: 0 0 5px 2px; }
+			.day-index-list { flex-direction: row; width: max-content; gap: 5px; }
+			.day-index-button { width: auto; min-height: 32px; padding: 6px 9px; border: 1px solid var(--line); background: var(--surface); }
 			.message-scroll { padding: 14px 11px; }
 			.bubble { max-width: 86%; }
 			.attachment img, .attachment video { max-height: 280px; }
@@ -365,8 +379,14 @@
 						<input class="search-input" id="message-search" type="search" placeholder="Buscar mensagens" autocomplete="off" aria-label="Buscar mensagens">
 					</label>
 				</header>
-				<div class="message-scroll" id="message-scroll">
-					<div class="message-list" id="message-list"></div>
+				<div class="conversation-body">
+					<aside class="day-index" aria-label="Índice por dia">
+						<h3 class="day-index-title">Ir para o dia</h3>
+						<nav class="day-index-list" id="day-index-list" aria-label="Dias com mensagens"></nav>
+					</aside>
+					<div class="message-scroll" id="message-scroll">
+						<div class="message-list" id="message-list"></div>
+					</div>
 				</div>
 				<footer class="conversation-footer">As mensagens permanecem neste dispositivo.</footer>
 			</section>
@@ -545,6 +565,58 @@
 			return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(date);
 		}
 
+		function formatIndexDate(date) {
+			const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "short" }).format(date).replace(/\.$/, "");
+			const capitalizedWeekday = weekday.charAt(0).toLocaleUpperCase("pt-BR") + weekday.slice(1);
+			return `${capitalizedWeekday}, ${formatDate(date)}`;
+		}
+
+		function renderDayIndex(chat) {
+			const list = document.querySelector("#day-index-list");
+			const dates = new Map();
+			for (const message of chat.messages) {
+				if (!dates.has(message.dateLabel)) dates.set(message.dateLabel, message.date);
+			}
+			list.replaceChildren();
+			for (const [dateLabel, date] of dates) {
+				const button = document.createElement("button");
+				button.className = "day-index-button";
+				button.type = "button";
+				button.dataset.date = dateLabel;
+				button.textContent = formatIndexDate(date);
+				button.addEventListener("click", () => navigateToDay(dateLabel));
+				list.append(button);
+			}
+			setActiveDay(chat.messages.at(-1)?.dateLabel);
+		}
+
+		function setActiveDay(dateLabel) {
+			for (const button of document.querySelectorAll(".day-index-button")) {
+				if (button.dataset.date === dateLabel) button.setAttribute("aria-current", "date");
+				else button.removeAttribute("aria-current");
+			}
+		}
+
+		function navigateToDay(dateLabel) {
+			const chat = state.currentChat;
+			if (!chat) return;
+			const dayStart = chat.messages.findIndex(message => message.dateLabel === dateLabel);
+			if (dayStart < 0) return;
+
+			const search = document.querySelector("#message-search");
+			const hadSearch = Boolean(search.value.trim());
+			const currentStart = Math.max(0, chat.messages.length - state.visibleCount);
+			if (dayStart < currentStart) state.visibleCount = chat.messages.length - dayStart;
+			if (hadSearch) search.value = "";
+			if (dayStart < currentStart || hadSearch) renderMessages();
+
+			const divider = [...document.querySelectorAll("#message-list .date-divider")]
+				.find(element => element.dataset.date === dateLabel);
+			if (!divider) return;
+			setActiveDay(dateLabel);
+			divider.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+
 		function openChat(chat) {
 			state.currentChat = chat;
 			state.visibleCount = 100;
@@ -555,6 +627,7 @@
 			document.querySelector("#message-search").value = "";
 			document.querySelector("#home-view").hidden = true;
 			document.querySelector("#conversation-view").classList.add("is-open");
+			renderDayIndex(chat);
 			renderMessages();
 			const scroll = document.querySelector("#message-scroll");
 			scroll.scrollTop = scroll.scrollHeight;
@@ -608,6 +681,7 @@
 				if (message.dateLabel !== previousDate) {
 					const divider = document.createElement("div");
 					divider.className = "date-divider";
+					divider.dataset.date = message.dateLabel;
 					divider.textContent = formatDate(message.date);
 					container.append(divider);
 					previousDate = message.dateLabel;
