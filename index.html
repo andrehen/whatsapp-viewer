@@ -574,38 +574,14 @@
 			const chat = state.currentChat;
 			if (!chat) return;
 			const list = document.querySelector("#message-list");
-			const scroll = document.querySelector("#message-scroll");
 			const query = document.querySelector("#message-search").value.trim().toLocaleLowerCase();
 			const filtered = query ? chat.messages.filter(message => `${message.sender} ${message.text} ${message.attachments.join(" ")}`.toLocaleLowerCase().includes(query)) : chat.messages;
 			const startIndex = Math.max(0, filtered.length - state.visibleCount);
 			const visible = filtered.slice(startIndex);
 			list.replaceChildren();
 
-			if (startIndex > 0 && !query) {
-				const older = document.createElement("button");
-				older.className = "button button-quiet load-older";
-				older.type = "button";
-				older.textContent = "Carregar mensagens anteriores";
-				older.addEventListener("click", () => {
-					const previousHeight = scroll.scrollHeight;
-					state.visibleCount += 100;
-					renderMessages();
-					scroll.scrollTop += scroll.scrollHeight - previousHeight;
-				});
-				list.append(older);
-			}
-
-			let previousDate = "";
-			for (const message of visible) {
-				if (message.dateLabel !== previousDate) {
-					const divider = document.createElement("div");
-					divider.className = "date-divider";
-					divider.textContent = formatDate(message.date);
-					list.append(divider);
-					previousDate = message.dateLabel;
-				}
-				list.append(renderMessage(chat, message));
-			}
+			if (startIndex > 0 && !query) list.append(createLoadOlderButton());
+			appendMessageBatch(list, chat, visible);
 			if (!visible.length) {
 				const empty = document.createElement("div");
 				empty.className = "date-divider";
@@ -615,6 +591,69 @@
 			document.querySelector("#conversation-count").textContent = query
 				? `${filtered.length.toLocaleString("pt-BR")} resultados`
 				: `${chat.messages.length.toLocaleString("pt-BR")} mensagens`;
+		}
+
+		function createLoadOlderButton() {
+			const button = document.createElement("button");
+			button.className = "button button-quiet load-older";
+			button.type = "button";
+			button.textContent = "Carregar mensagens anteriores";
+			button.addEventListener("click", loadOlderMessages);
+			return button;
+		}
+
+		function appendMessageBatch(container, chat, messages) {
+			let previousDate = "";
+			for (const message of messages) {
+				if (message.dateLabel !== previousDate) {
+					const divider = document.createElement("div");
+					divider.className = "date-divider";
+					divider.textContent = formatDate(message.date);
+					container.append(divider);
+					previousDate = message.dateLabel;
+				}
+				container.append(renderMessage(chat, message));
+			}
+		}
+
+		function loadOlderMessages() {
+			const chat = state.currentChat;
+			if (!chat) return;
+			const list = document.querySelector("#message-list");
+			const scroll = document.querySelector("#message-scroll");
+			const currentStart = Math.max(0, chat.messages.length - state.visibleCount);
+			const nextStart = Math.max(0, currentStart - 100);
+			const olderMessages = chat.messages.slice(nextStart, currentStart);
+			if (!olderMessages.length) return;
+
+			const scrollBounds = scroll.getBoundingClientRect();
+			const anchor = [...list.querySelectorAll(".message")].find(message => {
+				const bounds = message.getBoundingClientRect();
+				return bounds.bottom > scrollBounds.top && bounds.top < scrollBounds.bottom;
+			}) || list.querySelector(".message");
+			const anchorTop = anchor?.getBoundingClientRect().top;
+			const previousScrollBehavior = scroll.style.scrollBehavior;
+			const loadButton = list.querySelector(".load-older");
+			const firstMessage = list.querySelector(".message");
+			const firstDate = firstMessage?.previousElementSibling;
+			if (firstDate?.classList.contains("date-divider") && olderMessages.at(-1).dateLabel === chat.messages[currentStart].dateLabel) {
+				firstDate.remove();
+			}
+
+			const fragment = document.createDocumentFragment();
+			appendMessageBatch(fragment, chat, olderMessages);
+			state.visibleCount += olderMessages.length;
+			scroll.style.overflowAnchor = "none";
+			if (loadButton) loadButton.replaceWith(fragment);
+			else list.prepend(fragment);
+			if (nextStart > 0) list.prepend(createLoadOlderButton());
+
+			if (anchor?.isConnected && anchorTop !== undefined) {
+				scroll.style.scrollBehavior = "auto";
+				scroll.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
+				scroll.style.scrollBehavior = previousScrollBehavior;
+			}
+			scroll.style.overflowAnchor = "";
 		}
 
 		function renderMessage(chat, message) {
