@@ -303,6 +303,31 @@
 		.image-viewer-image { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; border-radius: 2px; object-fit: contain; transform: scale(1); transform-origin: center; user-select: none; -webkit-user-drag: none; }
 		.image-viewer-image.is-pannable { cursor: grab; touch-action: none; }
 		.image-viewer-image.is-panning { cursor: grabbing; }
+		.media-gallery[hidden], .video-viewer[hidden] { display: none; }
+		.media-gallery, .video-viewer { position: fixed; inset: 0; display: flex; flex-direction: column; padding: clamp(12px, 2.5vw, 28px); color: #fff; background: #101411ed; backdrop-filter: blur(5px); }
+		.media-gallery { z-index: 9; }
+		.video-viewer { z-index: 11; }
+		.media-gallery-toolbar, .video-viewer-toolbar { display: flex; align-items: center; gap: 12px; width: min(100%, 1100px); min-width: 0; margin: 0 auto 16px; }
+		.media-gallery-heading { flex: 1; min-width: 0; }
+		.media-gallery-heading h2 { overflow: hidden; margin: 0 0 3px; font-size: 19px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+		.media-gallery-count { color: #d5dfd7; font-size: 12px; }
+		.media-gallery-list { display: grid; flex: 1; width: min(100%, 1100px); min-height: 0; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 12px; overflow: auto; margin: 0 auto; padding: 2px; }
+		.media-gallery-item { min-width: 0; overflow: hidden; border: 1px solid #ffffff24; border-radius: 6px; background: #ffffff0b; }
+		.media-gallery-open { position: relative; display: block; width: 100%; aspect-ratio: 1; overflow: hidden; padding: 0; border: 0; background: #0005; cursor: pointer; }
+		.media-gallery-open img, .media-gallery-open video { display: block; width: 100%; height: 100%; object-fit: contain; }
+		.media-gallery-open.is-video::after { position: absolute; top: 50%; left: 50%; display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #ffffff88; border-radius: 50%; color: #fff; background: #111a; content: "▶"; font-size: 17px; transform: translate(-50%, -50%); }
+		.media-gallery-audio { display: flex; min-width: 0; aspect-ratio: 1; align-items: center; justify-content: center; padding: 8px; background: #0003; }
+		.media-gallery-audio audio { width: 100%; }
+		.media-gallery-details { display: grid; gap: 4px; padding: 10px 12px 12px; }
+		.media-gallery-date { justify-self: start; padding: 0; border: 0; color: #d5dfd7; background: transparent; font-size: 11px; text-align: left; cursor: pointer; }
+		.media-gallery-date:hover { color: #fff; text-decoration: underline; }
+		.media-gallery-name { overflow-wrap: anywhere; color: #fff; font-size: 10px; }
+		.media-gallery-sender { overflow: hidden; color: #aebbb1; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+		.media-gallery-empty { grid-column: 1 / -1; padding: 32px 16px; color: #d5dfd7; text-align: center; }
+		.video-viewer-toolbar { margin-bottom: 10px; }
+		.video-viewer-caption { flex: 1; min-width: 0; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+		.video-viewer-stage { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; }
+		.video-viewer-player { display: block; width: min(100%, 1200px); max-height: 100%; background: #000; }
 		.toast { position: fixed; right: 22px; bottom: 22px; z-index: 5; max-width: min(420px, calc(100vw - 44px)); padding: 13px 17px; border-radius: 6px; color: #fff; background: #28372f; box-shadow: var(--shadow); font-size: 13px; }
 		.toast[hidden] { display: none; }
 		.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
@@ -323,6 +348,8 @@
 			.conversation-header { gap: 9px; min-height: 67px; padding: 9px 12px; }
 			.conversation-header .avatar { flex-basis: 40px; width: 40px; height: 40px; }
 			.conversation-title h2 { font-size: 14px; }
+			.media-gallery-toggle { min-height: 38px; padding: 0 9px; font-size: 12px; white-space: nowrap; }
+			.media-gallery-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 			.conversation-search { width: 40px; padding: 0; }
 			.conversation-search:focus { width: min(155px, 35vw); padding: 0 8px 0 31px; }
 			.conversation-body { display: flex; flex-direction: column; }
@@ -339,6 +366,12 @@
 			.image-viewer-controls { gap: 4px; }
 			.image-viewer-button { flex-basis: 36px; width: 36px; height: 36px; }
 			.image-viewer-zoom { min-width: 43px; font-size: 11px; }
+		}
+		@media (min-width: 701px) and (max-width: 1000px) {
+			.media-gallery-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+		}
+		@media (max-width: 420px) {
+			.media-gallery-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 		}
 		@media (max-width: 360px) {
 			.brand { gap: 8px; }
@@ -398,6 +431,7 @@
 						<h2 id="conversation-name"></h2>
 						<p id="conversation-count"></p>
 					</div>
+					<button class="button button-quiet media-gallery-toggle" id="media-gallery-open" type="button" aria-label="Visualizar mídia desta conversa" disabled>Mídia · 0</button>
 					<label class="search-wrap conversation-search">
 						<span aria-hidden="true">⌕</span>
 						<input class="search-input" id="message-search" type="search" placeholder="Buscar mensagens" autocomplete="off" aria-label="Buscar mensagens">
@@ -433,6 +467,26 @@
 			<img class="image-viewer-image" id="image-viewer-image" alt="" draggable="false">
 		</div>
 	</div>
+	<div class="media-gallery" id="media-gallery" role="dialog" aria-modal="true" aria-labelledby="media-gallery-title" hidden>
+		<div class="media-gallery-toolbar">
+			<div class="media-gallery-heading">
+				<h2 id="media-gallery-title">Mídia da conversa</h2>
+				<div class="media-gallery-count" id="media-gallery-count"></div>
+			</div>
+			<button class="image-viewer-button close" id="media-gallery-close" type="button" title="Fechar galeria" aria-label="Fechar galeria">×</button>
+		</div>
+		<div class="media-gallery-list" id="media-gallery-list"></div>
+	</div>
+	<div class="video-viewer" id="video-viewer" role="dialog" aria-modal="true" aria-labelledby="video-viewer-caption" hidden>
+		<div class="video-viewer-toolbar">
+			<div class="video-viewer-caption" id="video-viewer-caption"></div>
+			<a class="image-viewer-button" id="video-viewer-download" href="#" download title="Baixar vídeo" aria-label="Baixar vídeo">↓</a>
+			<button class="image-viewer-button close" id="video-viewer-close" type="button" title="Fechar vídeo" aria-label="Fechar vídeo">×</button>
+		</div>
+		<div class="video-viewer-stage">
+			<video class="video-viewer-player" id="video-viewer-player" controls playsinline></video>
+		</div>
+	</div>
 
 	<script>
 		const state = { chats: [], currentChat: null, visibleCount: 100, objectUrls: new Set(), dayNavigationId: 0 };
@@ -444,12 +498,21 @@
 		const imageViewerImage = document.querySelector("#image-viewer-image");
 		const imageViewerStage = document.querySelector("#image-viewer-stage");
 		const imageViewerZoom = document.querySelector("#image-viewer-zoom");
+		const mediaGallery = document.querySelector("#media-gallery");
+		const mediaGalleryList = document.querySelector("#media-gallery-list");
+		const videoViewer = document.querySelector("#video-viewer");
+		const videoViewerPlayer = document.querySelector("#video-viewer-player");
 		let viewerScale = 1;
 		let viewerOffsetX = 0;
 		let viewerOffsetY = 0;
 		let viewerPan = null;
 		let previousViewerFocus = null;
 		let previousBodyOverflow = "";
+		let previousGalleryFocus = null;
+		let previousGalleryBodyOverflow = "";
+		let previousVideoFocus = null;
+		let previousVideoBodyOverflow = "";
+		let galleryObjectUrls = new Set();
 		let toastTimer;
 
 		function setViewerZoom(scale) {
@@ -501,7 +564,69 @@
 			if (previousViewerFocus?.isConnected) previousViewerFocus.focus();
 		}
 
+		function openMediaGallery() {
+			const chat = state.currentChat;
+			if (!chat) return;
+			previousGalleryFocus = document.activeElement;
+			previousGalleryBodyOverflow = document.body.style.overflow;
+			renderMediaGallery(chat);
+			mediaGallery.hidden = false;
+			document.body.style.overflow = "hidden";
+			document.querySelector("#media-gallery-close").focus();
+		}
+
+		function closeMediaGallery() {
+			if (mediaGallery.hidden) return;
+			mediaGallery.hidden = true;
+			clearMediaGalleryItems();
+			document.body.style.overflow = previousGalleryBodyOverflow;
+			if (previousGalleryFocus?.isConnected) previousGalleryFocus.focus();
+		}
+
+		function clearMediaGalleryItems() {
+			for (const audio of mediaGalleryList.querySelectorAll("audio")) audio.pause();
+			for (const url of galleryObjectUrls) {
+				URL.revokeObjectURL(url);
+				state.objectUrls.delete(url);
+			}
+			galleryObjectUrls.clear();
+			mediaGalleryList.replaceChildren();
+		}
+
+		function openVideoViewer(src, name) {
+			previousVideoFocus = document.activeElement;
+			previousVideoBodyOverflow = document.body.style.overflow;
+			document.querySelector("#video-viewer-caption").textContent = name;
+			const download = document.querySelector("#video-viewer-download");
+			download.href = src;
+			download.download = name;
+			videoViewerPlayer.src = src;
+			videoViewer.hidden = false;
+			document.body.style.overflow = "hidden";
+			document.querySelector("#video-viewer-close").focus();
+			videoViewerPlayer.play().catch(() => {});
+		}
+
+		function closeVideoViewer() {
+			if (videoViewer.hidden) return;
+			videoViewer.hidden = true;
+			videoViewerPlayer.pause();
+			videoViewerPlayer.removeAttribute("src");
+			videoViewerPlayer.load();
+			document.body.style.overflow = previousVideoBodyOverflow;
+			if (previousVideoFocus?.isConnected) previousVideoFocus.focus();
+		}
+
 		document.querySelector("#image-viewer-close").addEventListener("click", closeImageViewer);
+		document.querySelector("#media-gallery-open").addEventListener("click", openMediaGallery);
+		document.querySelector("#media-gallery-close").addEventListener("click", closeMediaGallery);
+		document.querySelector("#video-viewer-close").addEventListener("click", closeVideoViewer);
+		mediaGallery.addEventListener("click", event => {
+			if (event.target === mediaGallery) closeMediaGallery();
+		});
+		videoViewer.addEventListener("click", event => {
+			if (event.target === videoViewer) closeVideoViewer();
+		});
 		document.querySelector("#image-viewer-fit").addEventListener("click", () => setViewerZoom(1));
 		document.querySelector("#image-viewer-zoom-out").addEventListener("click", () => setViewerZoom(viewerScale - 0.25));
 		document.querySelector("#image-viewer-zoom-in").addEventListener("click", () => setViewerZoom(viewerScale + 0.25));
@@ -535,14 +660,17 @@
 			setViewerZoom(viewerScale + (event.deltaY < 0 ? 0.1 : -0.1));
 		}, { passive: false });
 		document.addEventListener("keydown", event => {
-			if (imageViewer.hidden) return;
+			const activeModal = !imageViewer.hidden ? imageViewer : !videoViewer.hidden ? videoViewer : !mediaGallery.hidden ? mediaGallery : null;
+			if (!activeModal) return;
 			if (event.key === "Escape") {
 				event.preventDefault();
-				closeImageViewer();
+				if (activeModal === imageViewer) closeImageViewer();
+				else if (activeModal === videoViewer) closeVideoViewer();
+				else closeMediaGallery();
 				return;
 			}
 			if (event.key !== "Tab") return;
-			const focusable = [...imageViewer.querySelectorAll("a[href], button:not(:disabled)")];
+			const focusable = [...activeModal.querySelectorAll("a[href], button:not(:disabled), audio[controls], video[controls]")];
 			const first = focusable[0];
 			const last = focusable.at(-1);
 			if (event.shiftKey && document.activeElement === first) {
@@ -814,6 +942,11 @@
 		function openChat(chat) {
 			state.currentChat = chat;
 			state.visibleCount = 100;
+			const mediaCount = getChatMediaItems(chat).length;
+			const mediaButton = document.querySelector("#media-gallery-open");
+			mediaButton.textContent = `Mídia · ${mediaCount.toLocaleString("pt-BR")}`;
+			mediaButton.disabled = mediaCount === 0;
+			mediaButton.setAttribute("aria-label", `Visualizar ${mediaCount} ${mediaCount === 1 ? "mídia" : "mídias"} desta conversa`);
 			document.querySelector(".app-shell").classList.add("is-conversation");
 			document.querySelector("#conversation-name").textContent = chat.name;
 			document.querySelector("#conversation-avatar").textContent = initials(chat.name);
@@ -828,6 +961,10 @@
 		}
 
 		function closeChat() {
+			closeImageViewer();
+			closeVideoViewer();
+			closeMediaGallery();
+			for (const media of document.querySelectorAll("#message-list audio, #message-list video")) media.pause();
 			document.querySelector("#conversation-view").classList.remove("is-open");
 			document.querySelector(".app-shell").classList.remove("is-conversation");
 			document.querySelector("#home-view").hidden = false;
@@ -967,6 +1104,116 @@
 			container.append(document.createTextNode(text.slice(cursor)));
 		}
 
+		function getMediaType(name) {
+			const extension = name.split(".").pop().toLocaleLowerCase();
+			if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(extension)) return "image";
+			if (["mp4", "mov", "webm", "m4v"].includes(extension)) return "video";
+			if (["opus", "ogg", "mp3", "m4a", "aac", "wav"].includes(extension)) return "audio";
+			return "";
+		}
+
+		function getChatMediaItems(chat) {
+			const items = [];
+			chat.messages.forEach((message, messageIndex) => {
+				message.attachments.forEach((name, attachmentIndex) => {
+					const type = getMediaType(name);
+					if (type) items.push({ message, messageIndex, attachmentIndex, name, type });
+				});
+			});
+			return items.sort((first, second) => first.message.date - second.message.date || first.messageIndex - second.messageIndex || first.attachmentIndex - second.attachmentIndex);
+		}
+
+		function renderMediaGallery(chat) {
+			clearMediaGalleryItems();
+			const items = getChatMediaItems(chat);
+			document.querySelector("#media-gallery-count").textContent = `${items.length.toLocaleString("pt-BR")} ${items.length === 1 ? "item" : "itens"}`;
+			if (!items.length) {
+				const empty = document.createElement("div");
+				empty.className = "media-gallery-empty";
+				empty.textContent = "Esta conversa não tem imagens, áudios ou vídeos.";
+				mediaGalleryList.append(empty);
+				return;
+			}
+
+			for (const item of items) {
+				const card = document.createElement("article");
+				card.className = "media-gallery-item";
+				const file = chat.mediaFiles.get(item.name.toLocaleLowerCase());
+				if (!file) {
+					const missing = document.createElement("div");
+					missing.className = "media-gallery-audio missing-file";
+					missing.textContent = `Arquivo não encontrado: ${item.name}`;
+					card.append(missing);
+				} else {
+					const url = URL.createObjectURL(file);
+					state.objectUrls.add(url);
+					galleryObjectUrls.add(url);
+					if (item.type === "image") {
+						const button = document.createElement("button");
+						button.className = "media-gallery-open";
+						button.type = "button";
+						button.setAttribute("aria-label", `Abrir imagem: ${item.name}`);
+						const image = document.createElement("img");
+						image.src = url;
+						image.alt = item.name;
+						image.loading = "lazy";
+						button.append(image);
+						button.addEventListener("click", () => openImageViewer(url, item.name));
+						card.append(button);
+					} else if (item.type === "video") {
+						const button = document.createElement("button");
+						button.className = "media-gallery-open is-video";
+						button.type = "button";
+						button.setAttribute("aria-label", `Reproduzir vídeo: ${item.name}`);
+						const video = document.createElement("video");
+						video.src = url;
+						video.preload = "metadata";
+						video.muted = true;
+						video.playsInline = true;
+						button.append(video);
+						button.addEventListener("click", () => openVideoViewer(url, item.name));
+						card.append(button);
+					} else {
+						const audioWrap = document.createElement("div");
+						audioWrap.className = "media-gallery-audio";
+						const audio = document.createElement("audio");
+						audio.controls = true;
+						audio.preload = "metadata";
+						audio.src = url;
+						audioWrap.append(audio);
+						card.append(audioWrap);
+					}
+				}
+
+				const details = document.createElement("div");
+				details.className = "media-gallery-details";
+				const dateButton = document.createElement("button");
+				dateButton.className = "media-gallery-date";
+				dateButton.type = "button";
+				dateButton.setAttribute("aria-label", `Ir para mensagens de ${formatDate(item.message.date)} às ${item.message.time}`);
+				const date = document.createElement("time");
+				date.dateTime = item.message.date.toISOString();
+				date.textContent = `${formatDate(item.message.date)} · ${item.message.time}`;
+				dateButton.append(date);
+				dateButton.addEventListener("click", () => {
+					closeMediaGallery();
+					void navigateToDay(item.message.dateLabel);
+				});
+				const name = document.createElement("span");
+				name.className = "media-gallery-name";
+				name.textContent = item.name;
+				details.append(dateButton, name);
+				if (item.message.sender) {
+					const sender = document.createElement("span");
+					sender.className = "media-gallery-sender";
+					sender.textContent = item.message.sender;
+					details.append(sender);
+				}
+				card.append(details);
+				mediaGalleryList.append(card);
+			}
+		}
+
 		function renderAttachment(chat, name) {
 			const wrapper = document.createElement("div");
 			wrapper.className = "attachment";
@@ -981,8 +1228,9 @@
 			const url = URL.createObjectURL(file);
 			state.objectUrls.add(url);
 			const extension = name.split(".").pop().toLocaleLowerCase();
+			const type = getMediaType(name);
 			let media;
-			if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(extension)) {
+			if (type === "image") {
 				media = document.createElement("img");
 				media.alt = name;
 				media.loading = "lazy";
@@ -997,13 +1245,13 @@
 						openImageViewer(url, name);
 					}
 				});
-			} else if (["mp4", "mov", "webm", "m4v"].includes(extension)) {
+			} else if (type === "video") {
 				media = document.createElement("video");
 				media.controls = true;
 				media.preload = "metadata";
 				media.playsInline = true;
 				media.src = url;
-			} else if (["opus", "ogg", "mp3", "m4a", "aac", "wav"].includes(extension)) {
+			} else if (type === "audio") {
 				media = document.createElement("audio");
 				media.controls = true;
 				media.preload = "metadata";
