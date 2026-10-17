@@ -237,7 +237,8 @@
 		.chat-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 		.chat-name { overflow: hidden; font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 		.chat-date { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
-		.chat-preview { overflow: hidden; margin: 5px 0 0; color: var(--preview-text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+		.chat-preview { display: block; width: 100%; min-width: 0; overflow: hidden; margin: 5px 0 0; color: var(--preview-text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+		.chat-message-count { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
 		.empty-state { grid-column: 1 / -1; padding: 34px 20px; border: 1px dashed var(--empty-border); border-radius: 8px; color: var(--muted); text-align: center; }
 
 		.conversation-view { display: none; height: calc(100vh - 112px); min-height: 520px; margin: 16px auto 0; overflow: hidden; border: 1px solid var(--rule); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow); }
@@ -700,8 +701,11 @@
 				preview.className = "chat-preview";
 				const lastMessage = chat.messages.at(-1);
 				preview.textContent = lastMessage ? `${lastMessage.sender ? `${lastMessage.sender}: ` : ""}${lastMessage.text || (lastMessage.attachments.length ? "Anexo" : "Mensagem")}` : "Conversa vazia";
+				const messageCount = document.createElement("span");
+				messageCount.className = "chat-message-count";
+				messageCount.textContent = `${chat.messages.length.toLocaleString("pt-BR")} mensagens`;
 				top.append(name, date);
-				details.append(top, preview);
+				details.append(top, preview, messageCount);
 				row.append(avatar, details);
 				row.addEventListener("click", () => openChat(chat));
 				chatList.append(row);
