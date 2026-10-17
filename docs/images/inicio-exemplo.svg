@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f4f3ed"/>
+  <circle cx="85" cy="45" r="220" fill="#e1e9dc" opacity=".55"/>
+  <circle cx="1120" cy="720" r="250" fill="#f2e8df" opacity=".6"/>
+  <g font-family="Arial, sans-serif" fill="#202c27">
+    <rect x="56" y="28" width="38" height="38" rx="12" fill="#316e53"/>
+    <text x="75" y="54" text-anchor="middle" fill="#fff" font-size="23" font-family="Georgia, serif">c</text>
+    <text x="108" y="53" font-size="20" font-family="Georgia, serif">Conversas</text>
+    <text x="237" y="51" fill="#77817b" font-size="12">arquivo de conversas</text>
+    <rect x="872" y="27" width="126" height="40" rx="7" fill="#fffefa" stroke="#e5e6de"/>
+    <text x="935" y="52" text-anchor="middle" fill="#316e53" font-size="13">☾  Tema claro</text>
+    <rect x="1010" y="27" width="142" height="40" rx="7" fill="#fffefa" stroke="#e5e6de"/>
+    <text x="1081" y="52" text-anchor="middle" font-size="13">＋  Abrir Chats</text>
+    <path d="M56 88H1144" stroke="#dfe2d9"/>
+
+    <text x="72" y="157" fill="#316e53" font-size="12" font-weight="bold" letter-spacing="1">ARQUIVOS DE BACKUP DO WHATSAPP</text>
+    <text x="72" y="229" font-size="55" font-family="Georgia, serif">Conversas, com contexto.</text>
+    <text x="74" y="270" fill="#68746c" font-size="16">Um lugar tranquilo para revisitar mensagens e arquivos.</text>
+    <rect x="72" y="296" width="210" height="48" rx="7" fill="#316e53"/>
+    <text x="177" y="326" text-anchor="middle" fill="#fff" font-size="14">＋  Selecionar pasta Chats</text>
+
+    <text x="72" y="413" font-size="25" font-family="Georgia, serif">Conversas</text>
+    <rect x="846" y="382" width="282" height="42" rx="6" fill="#fffefa" stroke="#e5e6de"/>
+    <text x="866" y="408" fill="#818981" font-size="14">⌕  Buscar conversa</text>
+    <path d="M72 438H1128" stroke="#dfe2d9"/>
+
+    <g>
+      <rect x="72" y="459" width="512" height="92" rx="8" fill="#fffefa" stroke="#e7e7df"/>
+      <circle cx="119" cy="505" r="24" fill="#e5f1e8"/>
+      <text x="119" y="511" text-anchor="middle" fill="#214b39" font-size="15" font-family="Georgia, serif">HD</text>
+      <text x="158" y="495" font-size="15" font-weight="bold">Helena Duarte</text>
+      <text x="520" y="495" text-anchor="end" fill="#77817b" font-size="11">16 out. 2026</text>
+      <text x="158" y="521" fill="#78817a" font-size="13">Helena Duarte: Nos vemos na livraria às 19h?</text>
+    </g>
+    <g>
+      <rect x="598" y="459" width="530" height="92" rx="8" fill="#fffefa" stroke="#e7e7df"/>
+      <circle cx="645" cy="505" r="24" fill="#e5f1e8"/>
+      <text x="645" y="511" text-anchor="middle" fill="#214b39" font-size="15" font-family="Georgia, serif">CL</text>
+      <text x="684" y="495" font-size="15" font-weight="bold">Clube do Livro</text>
+      <text x="1064" y="495" text-anchor="end" fill="#77817b" font-size="11">15 out. 2026</text>
+      <text x="684" y="521" fill="#78817a" font-size="13">Marina: Terminei o capitulo 4 ontem!</text>
+    </g>
+    <g>
+      <rect x="72" y="565" width="512" height="92" rx="8" fill="#fffefa" stroke="#e7e7df"/>
+      <circle cx="119" cy="611" r="24" fill="#e5f1e8"/>
+      <text x="119" y="617" text-anchor="middle" fill="#214b39" font-size="15" font-family="Georgia, serif">CN</text>
+      <text x="158" y="601" font-size="15" font-weight="bold">Caio Nogueira</text>
+      <text x="520" y="601" text-anchor="end" fill="#77817b" font-size="11">12 out. 2026</text>
+      <text x="158" y="627" fill="#78817a" font-size="13">Voce: Valeu pela dica, vou testar no fim de semana.</text>
+    </g>
+
+    <rect x="1003" y="693" width="125" height="30" rx="15" fill="#fffefa" stroke="#e5e6de"/>
+    <text x="1065" y="713" text-anchor="middle" fill="#77817b" font-size="11">DADOS FICTÍCIOS</text>
+  </g>
+</svg>
