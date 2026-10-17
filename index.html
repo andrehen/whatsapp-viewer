@@ -395,7 +395,7 @@
 	<div class="toast" id="toast" role="status" hidden></div>
 
 	<script>
-		const state = { chats: [], currentChat: null, visibleCount: 100, objectUrls: new Set() };
+		const state = { chats: [], currentChat: null, visibleCount: 100, objectUrls: new Set(), dayNavigationId: 0 };
 		const folderInput = document.querySelector("#folder-input");
 		const chatList = document.querySelector("#chat-list");
 		const toast = document.querySelector("#toast");
@@ -597,9 +597,10 @@
 			}
 		}
 
-		function navigateToDay(dateLabel) {
+		async function navigateToDay(dateLabel) {
 			const chat = state.currentChat;
 			if (!chat) return;
+			const navigationId = ++state.dayNavigationId;
 			const dayStart = chat.messages.findIndex(message => message.dateLabel === dateLabel);
 			if (dayStart < 0) return;
 
@@ -610,11 +611,49 @@
 			if (hadSearch) search.value = "";
 			if (dayStart < currentStart || hadSearch) renderMessages();
 
-			const divider = [...document.querySelectorAll("#message-list .date-divider")]
+			let divider = [...document.querySelectorAll("#message-list .date-divider")]
+				.find(element => element.dataset.date === dateLabel);
+			if (!divider) return;
+
+			const mediaBeforeDay = [...document.querySelectorAll("#message-list .attachment img, #message-list .attachment video")]
+				.filter(media => media.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING);
+			await Promise.all(mediaBeforeDay.map(waitForMediaLayout));
+			if (navigationId !== state.dayNavigationId || state.currentChat !== chat) return;
+
+			divider = [...document.querySelectorAll("#message-list .date-divider")]
 				.find(element => element.dataset.date === dateLabel);
 			if (!divider) return;
 			setActiveDay(dateLabel);
-			divider.scrollIntoView({ behavior: "smooth", block: "start" });
+			const scroll = document.querySelector("#message-scroll");
+			const previousScrollBehavior = scroll.style.scrollBehavior;
+			scroll.style.scrollBehavior = "auto";
+			scroll.scrollTop += divider.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
+			scroll.style.scrollBehavior = previousScrollBehavior;
+		}
+
+		function waitForMediaLayout(media) {
+			if (media instanceof HTMLImageElement) {
+				if (media.complete) return Promise.resolve();
+				return new Promise(resolve => {
+					const finish = () => resolve();
+					media.addEventListener("load", finish, { once: true });
+					media.addEventListener("error", finish, { once: true });
+					media.loading = "eager";
+					if (media.complete) finish();
+				});
+			}
+			if (media instanceof HTMLVideoElement) {
+				if (media.readyState >= HTMLMediaElement.HAVE_METADATA) return Promise.resolve();
+				return new Promise(resolve => {
+					const finish = () => resolve();
+					media.addEventListener("loadedmetadata", finish, { once: true });
+					media.addEventListener("error", finish, { once: true });
+					media.preload = "metadata";
+					media.load();
+					if (media.readyState >= HTMLMediaElement.HAVE_METADATA) finish();
+				});
+			}
+			return Promise.resolve();
 		}
 
 		function openChat(chat) {
