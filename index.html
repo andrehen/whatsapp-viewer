@@ -812,7 +812,9 @@
 				const parts = (file.webkitRelativePath || file.name).split("/");
 				const folderName = parts.length > 1 ? parts[parts.length - 2] : "";
 				const fileName = file.name.toLocaleLowerCase();
-				return fileName === "_chat.txt" || fileName === `${folderName}.txt`.toLocaleLowerCase();
+			return fileName === "_chat.txt"
+				|| fileName === `${folderName}.txt`.toLocaleLowerCase()
+				|| /^conversa do whatsapp com .+\.txt$/i.test(file.name);
 			});
 			if (!chatFiles.length) {
 				showToast("Não encontrei arquivos de conversa nessa seleção.");
@@ -823,6 +825,8 @@
 				const parts = (file.webkitRelativePath || file.name).split("/");
 				const folderName = parts.length > 1 ? parts[parts.length - 2] : "Conversa";
 				const folderPath = parts.slice(0, -1).join("/");
+				const contactName = file.name.match(/^Conversa do WhatsApp com (.+)\.txt$/i)?.[1].trim()
+					|| folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, "");
 				const text = await file.text();
 				const messages = parseChat(text);
 				const mediaFiles = new Map();
@@ -832,6 +836,7 @@
 				}
 				return {
 					name: folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, ""),
+					contactName,
 					folderName,
 					folderPath,
 					messages,
@@ -1149,11 +1154,11 @@
 
 		function renderMessage(chat, message) {
 			const article = document.createElement("article");
-			const isContact = message.sender && message.sender.toLocaleLowerCase() === chat.name.toLocaleLowerCase();
+			const isContact = message.sender && message.sender.toLocaleLowerCase() === chat.contactName.toLocaleLowerCase();
 			article.className = `message${isContact ? "" : " outgoing"}`;
 			const bubble = document.createElement("div");
 			bubble.className = "bubble";
-			if (message.sender && !isContact) {
+			if (message.sender) {
 				const sender = document.createElement("div");
 				sender.className = "sender";
 				sender.textContent = message.sender;
