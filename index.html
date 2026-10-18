@@ -808,9 +808,14 @@
 				fileIndex.set(path.toLocaleLowerCase(), file);
 			}
 
-			const chatFiles = files.filter(file => file.name.toLocaleLowerCase() === "_chat.txt");
+			const chatFiles = files.filter(file => {
+				const parts = (file.webkitRelativePath || file.name).split("/");
+				const folderName = parts.length > 1 ? parts[parts.length - 2] : "";
+				const fileName = file.name.toLocaleLowerCase();
+				return fileName === "_chat.txt" || fileName === `${folderName}.txt`.toLocaleLowerCase();
+			});
 			if (!chatFiles.length) {
-				showToast("Não encontrei nenhum arquivo _chat.txt nessa seleção.");
+				showToast("Não encontrei arquivos de conversa nessa seleção.");
 				return;
 			}
 
@@ -844,19 +849,23 @@
 		function parseChat(text) {
 			const messages = [];
 			const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
-			const messageStart = /^[\u200e\u200f\u202a-\u202e]*\[(\d{1,2}\/\d{1,2}\/\d{4}), (\d{1,2}:\d{2}:\d{2})\]\s(.*)$/;
+			const messageStart = /^[\u200e\u200f\u202a-\u202e]*(?:\[(\d{1,2}\/\d{1,2}\/\d{4}), (\d{1,2}:\d{2}:\d{2})\]|(\d{1,2}\/\d{1,2}\/\d{4}) (\d{1,2}:\d{2}) - )(.*)$/;
 			for (const line of lines) {
 				const match = line.match(messageStart);
 				if (!match) {
 					if (messages.length && line) messages[messages.length - 1].text += `\n${line}`;
 					continue;
 				}
-				const [, dateText, time, remainder] = match;
+				const [, iosDate, iosTime, androidDate, androidTime, remainder] = match;
+				const dateText = iosDate || androidDate;
+				const time = iosTime || `${androidTime}:00`;
 				const senderSplit = remainder.match(/^([^:]+):\s?(.*)$/);
 				const sender = senderSplit ? senderSplit[1].trim() : "";
 				const body = senderSplit ? senderSplit[2] : remainder;
 				const attachments = [...body.matchAll(/<anexado:\s*([^>]+)>/gi)].map(item => item[1].trim());
-				const cleanText = body.replace(/<anexado:\s*[^>]+>/gi, "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").trim();
+				const androidAttachment = body.match(/^[\u200e\u200f]*([^\r\n]+?) \(arquivo anexado\)$/i);
+				if (androidAttachment) attachments.push(androidAttachment[1].trim());
+				const cleanText = body.replace(/<anexado:\s*[^>]+>/gi, "").replace(/^[\u200e\u200f]*[^\r\n]+? \(arquivo anexado\)$/i, "").replace(/[\u200e\u200f\u202a-\u202e]/g, "").trim();
 				const [day, month, year] = dateText.split("/").map(Number);
 				const [hour, minute, second] = time.split(":").map(Number);
 				messages.push({

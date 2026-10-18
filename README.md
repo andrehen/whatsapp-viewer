@@ -30,19 +30,19 @@ Não há etapa de build nem envio dos arquivos para um servidor. A leitura e a e
 
 ## Estrutura esperada
 
-Cada conversa deve ter um arquivo `_chat.txt`; os anexos referenciados no texto devem estar na mesma pasta:
+Cada conversa deve ter o arquivo de texto exportado junto com os anexos. Exports do iOS usam `_chat.txt`; exports do Android podem usar o nome da conversa, como no exemplo abaixo:
 
 ```text
 Chats/
   WhatsApp Chat - Ana Exemplo/
-    _chat.txt
+    WhatsApp Chat - Ana Exemplo.txt
     000001-PHOTO-2026-01-10-12-30-00.jpg
     000002-AUDIO-2026-01-10-12-32-00.opus
 ```
 
 O nome `Ana Exemplo` e os arquivos acima são apenas exemplos fictícios.
 
-O leitor reconhece mensagens no formato de exportação com data `dd/mm/aaaa`, hora `hh:mm:ss` e anexos marcados como `<anexado: nome-do-arquivo>`. O nome do anexo no texto precisa corresponder ao arquivo presente na pasta.
+O leitor reconhece os formatos de exportação do iOS (`[dd/mm/aaaa, hh:mm:ss]`) e do Android (`dd/mm/aaaa hh:mm -`), incluindo anexos marcados como `<anexado: nome-do-arquivo>` ou `(arquivo anexado)`. O nome do anexo no texto precisa corresponder ao arquivo presente na pasta.
 
 ## Tipos de arquivo
 
