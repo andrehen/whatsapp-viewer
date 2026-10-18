@@ -501,7 +501,7 @@
 		const mediaGallery = document.querySelector("#media-gallery");
 		const mediaGalleryList = document.querySelector("#media-gallery-list");
 		const videoViewer = document.querySelector("#video-viewer");
-		const videoViewerPlayer = document.querySelector("#video-viewer-player");
+		let videoViewerPlayer = document.querySelector("#video-viewer-player");
 		let viewerScale = 1;
 		let viewerOffsetX = 0;
 		let viewerOffsetY = 0;
@@ -673,9 +673,18 @@
 		function closeVideoViewer() {
 			if (videoViewer.hidden) return;
 			videoViewer.hidden = true;
-			videoViewerPlayer.pause();
-			videoViewerPlayer.removeAttribute("src");
-			videoViewerPlayer.load();
+			const oldPlayer = videoViewerPlayer;
+			oldPlayer.pause();
+			oldPlayer.removeAttribute("src");
+			oldPlayer.srcObject = null;
+			oldPlayer.load();
+			const replacement = document.createElement("video");
+			replacement.className = oldPlayer.className;
+			replacement.id = oldPlayer.id;
+			replacement.controls = true;
+			replacement.playsInline = true;
+			oldPlayer.replaceWith(replacement);
+			videoViewerPlayer = replacement;
 			if (videoViewerObjectUrl) {
 				URL.revokeObjectURL(videoViewerObjectUrl);
 				state.objectUrls.delete(videoViewerObjectUrl);
