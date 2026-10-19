@@ -247,6 +247,9 @@
 		.conversation-title { flex: 1; min-width: 0; }
 		.conversation-title h2 { overflow: hidden; margin: 0 0 4px; font-size: 16px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 		.conversation-title p { margin: 0; color: var(--muted); font-size: 12px; }
+		.participant-picker[hidden] { display: none; }
+		.participant-picker { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); font-size: 11px; }
+		.participant-picker select { min-width: 0; max-width: 100%; height: 32px; padding: 0 28px 0 9px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: var(--input-surface); font-size: 12px; }
 		.conversation-search { width: min(250px, 30vw); }
 		.conversation-body { display: grid; flex: 1; min-height: 0; grid-template-columns: 220px minmax(0, 1fr); }
 		.day-index { min-width: 0; overflow: auto; padding: 15px 10px; border-right: 1px solid var(--line); background: var(--surface); }
@@ -430,6 +433,10 @@
 					<div class="conversation-title">
 						<h2 id="conversation-name"></h2>
 						<p id="conversation-count"></p>
+						<label class="participant-picker" id="participant-picker" hidden>
+							<span>Ponto de vista</span>
+							<select id="participant-select" aria-label="Selecionar participante como ponto de vista"></select>
+						</label>
 					</div>
 					<button class="button button-quiet media-gallery-toggle" id="media-gallery-open" type="button" aria-label="Visualizar mídia desta conversa" disabled>Mídia · 0</button>
 					<label class="search-wrap conversation-search">
@@ -788,6 +795,11 @@
 		document.querySelector("#choose-folder").addEventListener("click", () => folderInput.click());
 		document.querySelector("#choose-folder-main").addEventListener("click", () => folderInput.click());
 		document.querySelector("#back-button").addEventListener("click", closeChat);
+		document.querySelector("#participant-select").addEventListener("change", event => {
+			if (!state.currentChat) return;
+			state.currentChat.perspective = event.target.value;
+			renderMessages();
+		});
 		document.querySelector("#chat-search").addEventListener("input", renderChatList);
 		document.querySelector("#message-search").addEventListener("input", () => {
 			state.visibleCount = MESSAGE_WINDOW_SIZE;
@@ -842,10 +854,15 @@
 					|| folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, "");
 				const text = await file.text();
 				const messages = parseChat(text);
-				const participants = [...new Map(messages
+				const senderNames = [...new Map(messages
 					.map(message => message.sender.trim())
 					.filter(Boolean)
 					.map(name => [name.toLocaleLowerCase("pt-BR"), name])).values()];
+				const matchesContactName = senderNames.some(name => name.toLocaleLowerCase("pt-BR") === contactName.toLocaleLowerCase("pt-BR"));
+				const isGroup = senderNames.length > 2 || (senderNames.length > 1 && !matchesContactName);
+				const participants = isGroup
+					? senderNames.filter(name => name.toLocaleLowerCase("pt-BR") !== contactName.toLocaleLowerCase("pt-BR"))
+					: senderNames;
 				const name = formatChatName(participants, folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, ""));
 				const mediaFiles = new Map();
 				const folderPrefix = `${folderPath}/`.toLocaleLowerCase();
@@ -855,6 +872,8 @@
 				return {
 					name,
 					participants,
+					isGroup,
+					perspective: isGroup ? participants[0] : contactName,
 					contactName,
 					folderName,
 					folderPath,
@@ -1078,6 +1097,16 @@
 			state.currentChat = chat;
 			state.visibleCount = MESSAGE_WINDOW_SIZE;
 			state.visibleEnd = null;
+			const participantPicker = document.querySelector("#participant-picker");
+			const participantSelect = document.querySelector("#participant-select");
+			participantPicker.hidden = !chat.isGroup;
+			participantSelect.replaceChildren(...chat.participants.map(name => {
+				const option = document.createElement("option");
+				option.value = name;
+				option.textContent = name;
+				return option;
+			}));
+			if (chat.isGroup) participantSelect.value = chat.perspective;
 			const mediaCount = getChatMediaItems(chat).length;
 			const mediaButton = document.querySelector("#media-gallery-open");
 			mediaButton.textContent = `Mídia · ${mediaCount.toLocaleString("pt-BR")}`;
@@ -1321,7 +1350,10 @@
 		function renderMessage(chat, message) {
 			const article = document.createElement("article");
 			const isContact = message.sender && message.sender.toLocaleLowerCase() === chat.contactName.toLocaleLowerCase();
-			article.className = `message${isContact ? "" : " outgoing"}`;
+			const isOutgoing = chat.isGroup
+				? message.sender && message.sender.toLocaleLowerCase("pt-BR") === chat.perspective.toLocaleLowerCase("pt-BR")
+				: !isContact;
+			article.className = `message${isOutgoing ? " outgoing" : ""}`;
 			const bubble = document.createElement("div");
 			bubble.className = "bubble";
 			if (message.sender) {
