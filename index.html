@@ -234,8 +234,8 @@
 			font-size: 18px;
 		}
 		.chat-details { flex: 1; min-width: 0; }
-		.chat-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-		.chat-name { overflow: hidden; font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+		.chat-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+		.chat-name { display: -webkit-box; flex: 1; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; font-size: 15px; font-weight: 650; line-height: 1.3; }
 		.chat-date { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
 		.chat-preview { display: block; width: 100%; min-width: 0; overflow: hidden; margin: 5px 0 0; color: var(--preview-text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 		.chat-message-count { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
@@ -287,7 +287,7 @@
 		.file-name { display: block; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
 		.file-hint { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
 		.missing-file { color: var(--missing-file); font-size: 12px; }
-		.load-older { align-self: center; margin: 0 0 15px; }
+		.load-older, .load-newer { align-self: center; margin: 0 0 15px; }
 		.conversation-footer { display: flex; justify-content: center; padding: 11px; border-top: 1px solid var(--line); color: var(--muted); background: var(--surface); font-size: 11px; }
 		.image-viewer[hidden] { display: none; }
 		.image-viewer { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 14px; padding: clamp(10px, 2.5vw, 28px); color: #fff; background: #101411ed; backdrop-filter: blur(5px); }
@@ -489,7 +489,9 @@
 	</div>
 
 	<script>
-		const state = { chats: [], currentChat: null, visibleCount: 100, objectUrls: new Set(), dayNavigationId: 0 };
+		const MESSAGE_PAGE_SIZE = 100;
+		const MESSAGE_WINDOW_SIZE = MESSAGE_PAGE_SIZE * 3;
+		const state = { chats: [], currentChat: null, visibleCount: MESSAGE_WINDOW_SIZE, visibleEnd: null, objectUrls: new Set(), dayNavigationId: 0 };
 		const folderInput = document.querySelector("#folder-input");
 		const chatList = document.querySelector("#chat-list");
 		const toast = document.querySelector("#toast");
@@ -788,8 +790,19 @@
 		document.querySelector("#back-button").addEventListener("click", closeChat);
 		document.querySelector("#chat-search").addEventListener("input", renderChatList);
 		document.querySelector("#message-search").addEventListener("input", () => {
-			state.visibleCount = 100;
+			state.visibleCount = MESSAGE_WINDOW_SIZE;
+			state.visibleEnd = null;
 			renderMessages();
+		});
+		const messageScroll = document.querySelector("#message-scroll");
+		let isShiftingMessageWindow = false;
+		messageScroll.addEventListener("scroll", () => {
+			const chat = state.currentChat;
+			if (!chat || isShiftingMessageWindow || document.querySelector("#message-search").value.trim()) return;
+
+			const { start, end } = getVisibleMessageRange(chat);
+			if (start > 0 && messageScroll.scrollTop <= 120) loadOlderMessages();
+			else if (end < chat.messages.length && messageScroll.scrollHeight - messageScroll.clientHeight - messageScroll.scrollTop <= 120) loadNewerMessages();
 		});
 		folderInput.addEventListener("change", loadFolder);
 
@@ -829,13 +842,19 @@
 					|| folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, "");
 				const text = await file.text();
 				const messages = parseChat(text);
+				const participants = [...new Map(messages
+					.map(message => message.sender.trim())
+					.filter(Boolean)
+					.map(name => [name.toLocaleLowerCase("pt-BR"), name])).values()];
+				const name = formatChatName(participants, folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, ""));
 				const mediaFiles = new Map();
 				const folderPrefix = `${folderPath}/`.toLocaleLowerCase();
 				for (const [path, mediaFile] of fileIndex) {
 					if (path.startsWith(folderPrefix)) mediaFiles.set(path.slice(folderPrefix.length), mediaFile);
 				}
 				return {
-					name: folderName.replace(/^WhatsApp Chat\s*[-–]\s*/i, ""),
+					name,
+					participants,
 					contactName,
 					folderName,
 					folderPath,
@@ -874,6 +893,7 @@
 				const [day, month, year] = dateText.split("/").map(Number);
 				const [hour, minute, second] = time.split(":").map(Number);
 				messages.push({
+					index: messages.length,
 					sender,
 					text: cleanText,
 					attachments,
@@ -905,7 +925,7 @@
 				row.className = "chat-row";
 				const avatar = document.createElement("span");
 				avatar.className = "avatar";
-				avatar.textContent = initials(chat.name);
+				avatar.textContent = chatInitials(chat);
 				const details = document.createElement("span");
 				details.className = "chat-details";
 				const top = document.createElement("span");
@@ -933,6 +953,17 @@
 
 		function initials(name) {
 			return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toLocaleUpperCase("pt-BR");
+		}
+
+		function formatChatName(participants, fallbackName) {
+			if (!participants.length) return fallbackName;
+			const names = new Intl.ListFormat("pt-BR", { type: "conjunction" }).format(participants);
+			return participants.length === 1 ? `Conversa com ${names}` : `Conversa entre ${names}`;
+		}
+
+		function chatInitials(chat) {
+			const names = chat.participants.map(name => name.trim().split(/\s+/)[0]).slice(0, 2).join(" ");
+			return initials(names || chat.name);
 		}
 
 		function formatDate(date) {
@@ -975,34 +1006,47 @@
 			const chat = state.currentChat;
 			if (!chat) return;
 			const navigationId = ++state.dayNavigationId;
+			isShiftingMessageWindow = true;
 			const dayStart = chat.messages.findIndex(message => message.dateLabel === dateLabel);
-			if (dayStart < 0) return;
+			if (dayStart < 0) {
+				isShiftingMessageWindow = false;
+				return;
+			}
 
 			const search = document.querySelector("#message-search");
-			const hadSearch = Boolean(search.value.trim());
-			const currentStart = Math.max(0, chat.messages.length - state.visibleCount);
-			if (dayStart < currentStart) state.visibleCount = chat.messages.length - dayStart;
-			if (hadSearch) search.value = "";
-			if (dayStart < currentStart || hadSearch) renderMessages();
+			if (search.value.trim()) search.value = "";
+			state.visibleCount = MESSAGE_WINDOW_SIZE;
+			state.visibleEnd = Math.min(chat.messages.length, Math.max(MESSAGE_WINDOW_SIZE, dayStart + MESSAGE_PAGE_SIZE * 2));
+			const scroll = document.querySelector("#message-scroll");
+			renderMessages();
 
 			let divider = [...document.querySelectorAll("#message-list .date-divider")]
 				.find(element => element.dataset.date === dateLabel);
-			if (!divider) return;
+			if (!divider) {
+				if (navigationId === state.dayNavigationId) isShiftingMessageWindow = false;
+				return;
+			}
 
 			const mediaBeforeDay = [...document.querySelectorAll("#message-list .attachment img, #message-list .attachment video")]
 				.filter(media => media.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING);
 			await Promise.all(mediaBeforeDay.map(waitForMediaLayout));
-			if (navigationId !== state.dayNavigationId || state.currentChat !== chat) return;
+			if (navigationId !== state.dayNavigationId || state.currentChat !== chat) {
+				if (navigationId === state.dayNavigationId) isShiftingMessageWindow = false;
+				return;
+			}
 
 			divider = [...document.querySelectorAll("#message-list .date-divider")]
 				.find(element => element.dataset.date === dateLabel);
-			if (!divider) return;
+			if (!divider) {
+				isShiftingMessageWindow = false;
+				return;
+			}
 			setActiveDay(dateLabel);
-			const scroll = document.querySelector("#message-scroll");
 			const previousScrollBehavior = scroll.style.scrollBehavior;
 			scroll.style.scrollBehavior = "auto";
 			scroll.scrollTop += divider.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
 			scroll.style.scrollBehavior = previousScrollBehavior;
+			isShiftingMessageWindow = false;
 		}
 
 		function waitForMediaLayout(media) {
@@ -1032,7 +1076,8 @@
 
 		function openChat(chat) {
 			state.currentChat = chat;
-			state.visibleCount = 100;
+			state.visibleCount = MESSAGE_WINDOW_SIZE;
+			state.visibleEnd = null;
 			const mediaCount = getChatMediaItems(chat).length;
 			const mediaButton = document.querySelector("#media-gallery-open");
 			mediaButton.textContent = `Mídia · ${mediaCount.toLocaleString("pt-BR")}`;
@@ -1040,7 +1085,7 @@
 			mediaButton.setAttribute("aria-label", `Visualizar ${mediaCount} ${mediaCount === 1 ? "mídia" : "mídias"} desta conversa`);
 			document.querySelector(".app-shell").classList.add("is-conversation");
 			document.querySelector("#conversation-name").textContent = chat.name;
-			document.querySelector("#conversation-avatar").textContent = initials(chat.name);
+			document.querySelector("#conversation-avatar").textContent = chatInitials(chat);
 			document.querySelector("#conversation-count").textContent = `${chat.messages.length.toLocaleString("pt-BR")} mensagens`;
 			document.querySelector("#message-search").value = "";
 			document.querySelector("#home-view").hidden = true;
@@ -1048,7 +1093,10 @@
 			renderDayIndex(chat);
 			renderMessages();
 			const scroll = document.querySelector("#message-scroll");
+			const previousScrollBehavior = scroll.style.scrollBehavior;
+			scroll.style.scrollBehavior = "auto";
 			scroll.scrollTop = scroll.scrollHeight;
+			scroll.style.scrollBehavior = previousScrollBehavior;
 		}
 
 		function closeChat() {
@@ -1060,6 +1108,7 @@
 			document.querySelector(".app-shell").classList.remove("is-conversation");
 			document.querySelector("#home-view").hidden = false;
 			state.currentChat = null;
+			state.visibleEnd = null;
 			for (const url of state.objectUrls) URL.revokeObjectURL(url);
 			state.objectUrls.clear();
 			document.querySelector("#message-list").replaceChildren();
@@ -1071,12 +1120,16 @@
 			const list = document.querySelector("#message-list");
 			const query = document.querySelector("#message-search").value.trim().toLocaleLowerCase();
 			const filtered = query ? chat.messages.filter(message => `${message.sender} ${message.text} ${message.attachments.join(" ")}`.toLocaleLowerCase().includes(query)) : chat.messages;
-			const startIndex = Math.max(0, filtered.length - state.visibleCount);
-			const visible = filtered.slice(startIndex);
+			const range = query ? null : getVisibleMessageRange(chat);
+			const endIndex = query ? filtered.length : range.end;
+			const startIndex = Math.max(0, endIndex - state.visibleCount);
+			const visible = filtered.slice(startIndex, endIndex);
+			for (const message of list.querySelectorAll(".message")) releaseMessageAttachments(message);
 			list.replaceChildren();
 
 			if (startIndex > 0 && !query) list.append(createLoadOlderButton());
 			appendMessageBatch(list, chat, visible);
+			if (endIndex < filtered.length && !query) list.append(createLoadNewerButton());
 			if (!visible.length) {
 				const empty = document.createElement("div");
 				empty.className = "date-divider";
@@ -1088,6 +1141,11 @@
 				: `${chat.messages.length.toLocaleString("pt-BR")} mensagens`;
 		}
 
+		function getVisibleMessageRange(chat) {
+			const end = Math.min(state.visibleEnd ?? chat.messages.length, chat.messages.length);
+			return { start: Math.max(0, end - state.visibleCount), end };
+		}
+
 		function createLoadOlderButton() {
 			const button = document.createElement("button");
 			button.className = "button button-quiet load-older";
@@ -1097,8 +1155,16 @@
 			return button;
 		}
 
-		function appendMessageBatch(container, chat, messages) {
-			let previousDate = "";
+		function createLoadNewerButton() {
+			const button = document.createElement("button");
+			button.className = "button button-quiet load-newer";
+			button.type = "button";
+			button.textContent = "Carregar mensagens posteriores";
+			button.addEventListener("click", loadNewerMessages);
+			return button;
+		}
+
+		function appendMessageBatch(container, chat, messages, previousDate = "") {
 			for (const message of messages) {
 				if (message.dateLabel !== previousDate) {
 					const divider = document.createElement("div");
@@ -1108,48 +1174,148 @@
 					container.append(divider);
 					previousDate = message.dateLabel;
 				}
-				container.append(renderMessage(chat, message));
+				const article = renderMessage(chat, message);
+				article.dataset.index = String(message.index);
+				article.dataset.date = message.dateLabel;
+				container.append(article);
 			}
+		}
+
+		function captureMessageScrollAnchor(list, scroll, direction) {
+			const bounds = scroll.getBoundingClientRect();
+			const messages = [...list.querySelectorAll(".message")];
+			if (direction === "newer") messages.reverse();
+			const message = messages.find(item => {
+				const messageBounds = item.getBoundingClientRect();
+				return messageBounds.bottom > bounds.top && messageBounds.top < bounds.bottom;
+			});
+			if (!message) return null;
+			return { index: Number(message.dataset.index), top: message.getBoundingClientRect().top };
+		}
+
+		function restoreMessageScrollAnchor(anchor, list, scroll) {
+			if (!anchor) return;
+			const message = list.querySelector(`.message[data-index="${anchor.index}"]`);
+			if (message) scroll.scrollTop += message.getBoundingClientRect().top - anchor.top;
+		}
+
+		function releaseMessageAttachments(message) {
+			const urls = [...message.querySelectorAll("[src], a[href]")]
+				.map(element => element.currentSrc || element.src || element.href)
+				.filter(url => url.startsWith("blob:"));
+			for (const media of message.querySelectorAll("audio, video")) {
+				media.pause();
+				media.removeAttribute("src");
+				media.load();
+			}
+			for (const url of urls) {
+				URL.revokeObjectURL(url);
+				state.objectUrls.delete(url);
+			}
+		}
+
+		function removeFirstMessage(list) {
+			const message = list.querySelector(".message");
+			if (!message) return;
+			const divider = message.previousElementSibling?.classList.contains("date-divider") ? message.previousElementSibling : null;
+			const next = message.nextElementSibling;
+			releaseMessageAttachments(message);
+			message.remove();
+			if (divider && (!next || next.classList.contains("date-divider") || next.dataset.date !== divider.dataset.date)) divider.remove();
+		}
+
+		function removeLastMessage(list) {
+			const messages = list.querySelectorAll(".message");
+			const message = messages[messages.length - 1];
+			if (!message) return;
+			const divider = message.previousElementSibling?.classList.contains("date-divider") ? message.previousElementSibling : null;
+			const previous = divider?.previousElementSibling;
+			const dateLabel = message.dataset.date;
+			releaseMessageAttachments(message);
+			message.remove();
+			if (divider && previous?.dataset.date !== dateLabel) divider.remove();
+		}
+
+		function updateMessageWindowControls(list, range, messageCount) {
+			let olderButton = list.querySelector(".load-older");
+			if (range.start > 0 && !olderButton) {
+				olderButton = createLoadOlderButton();
+				list.prepend(olderButton);
+			} else if (range.start === 0) {
+				olderButton?.remove();
+			}
+			let newerButton = list.querySelector(".load-newer");
+			if (range.end < messageCount && !newerButton) list.append(createLoadNewerButton());
+			else if (range.end === messageCount) newerButton?.remove();
 		}
 
 		function loadOlderMessages() {
 			const chat = state.currentChat;
-			if (!chat) return;
+			if (!chat || isShiftingMessageWindow) return;
 			const list = document.querySelector("#message-list");
 			const scroll = document.querySelector("#message-scroll");
-			const currentStart = Math.max(0, chat.messages.length - state.visibleCount);
-			const nextStart = Math.max(0, currentStart - 100);
-			const olderMessages = chat.messages.slice(nextStart, currentStart);
-			if (!olderMessages.length) return;
+			const range = getVisibleMessageRange(chat);
+			const count = Math.min(MESSAGE_PAGE_SIZE, range.start);
+			if (!count) return;
 
-			const scrollBounds = scroll.getBoundingClientRect();
-			const anchor = [...list.querySelectorAll(".message")].find(message => {
-				const bounds = message.getBoundingClientRect();
-				return bounds.bottom > scrollBounds.top && bounds.top < scrollBounds.bottom;
-			}) || list.querySelector(".message");
-			const anchorTop = anchor?.getBoundingClientRect().top;
-			const previousScrollBehavior = scroll.style.scrollBehavior;
-			const loadButton = list.querySelector(".load-older");
-			const firstMessage = list.querySelector(".message");
-			const firstDate = firstMessage?.previousElementSibling;
-			if (firstDate?.classList.contains("date-divider") && olderMessages.at(-1).dateLabel === chat.messages[currentStart].dateLabel) {
-				firstDate.remove();
-			}
-
+			const anchor = captureMessageScrollAnchor(list, scroll, "older");
+			const olderMessages = chat.messages.slice(range.start - count, range.start);
 			const fragment = document.createDocumentFragment();
 			appendMessageBatch(fragment, chat, olderMessages);
-			state.visibleCount += olderMessages.length;
-			scroll.style.overflowAnchor = "none";
-			if (loadButton) loadButton.replaceWith(fragment);
-			else list.prepend(fragment);
-			if (nextStart > 0) list.prepend(createLoadOlderButton());
-
-			if (anchor?.isConnected && anchorTop !== undefined) {
-				scroll.style.scrollBehavior = "auto";
-				scroll.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
-				scroll.style.scrollBehavior = previousScrollBehavior;
+			const firstCurrentDate = list.querySelector(".message")?.dataset.date;
+			if (olderMessages.at(-1).dateLabel === firstCurrentDate) {
+				[...fragment.querySelectorAll(".date-divider")]
+					.filter(divider => divider.dataset.date === firstCurrentDate)
+					.at(-1)?.remove();
 			}
+
+			isShiftingMessageWindow = true;
+			const previousScrollBehavior = scroll.style.scrollBehavior;
+			scroll.style.scrollBehavior = "auto";
+			scroll.style.overflowAnchor = "none";
+			const olderButton = list.querySelector(".load-older");
+			list.insertBefore(fragment, olderButton?.nextSibling ?? list.firstChild);
+			state.visibleEnd = range.end - count;
+			for (let index = 0; index < count; index++) removeLastMessage(list);
+			const nextRange = getVisibleMessageRange(chat);
+			updateMessageWindowControls(list, nextRange, chat.messages.length);
+			restoreMessageScrollAnchor(anchor, list, scroll);
 			scroll.style.overflowAnchor = "";
+			scroll.style.scrollBehavior = previousScrollBehavior;
+			setActiveDay(chat.messages[anchor?.index ?? nextRange.start]?.dateLabel);
+			isShiftingMessageWindow = false;
+		}
+
+		function loadNewerMessages() {
+			const chat = state.currentChat;
+			if (!chat || isShiftingMessageWindow) return;
+			const list = document.querySelector("#message-list");
+			const scroll = document.querySelector("#message-scroll");
+			const range = getVisibleMessageRange(chat);
+			const count = Math.min(MESSAGE_PAGE_SIZE, chat.messages.length - range.end);
+			if (!count) return;
+
+			const anchor = captureMessageScrollAnchor(list, scroll, "newer");
+			const lastCurrentDate = list.querySelector(".message:last-of-type")?.dataset.date;
+			const newerMessages = chat.messages.slice(range.end, range.end + count);
+			const fragment = document.createDocumentFragment();
+			appendMessageBatch(fragment, chat, newerMessages, lastCurrentDate);
+
+			isShiftingMessageWindow = true;
+			const previousScrollBehavior = scroll.style.scrollBehavior;
+			scroll.style.scrollBehavior = "auto";
+			scroll.style.overflowAnchor = "none";
+			const newerButton = list.querySelector(".load-newer");
+			list.insertBefore(fragment, newerButton ?? null);
+			state.visibleEnd = range.end + count;
+			for (let index = 0; index < count; index++) removeFirstMessage(list);
+			const nextRange = getVisibleMessageRange(chat);
+			updateMessageWindowControls(list, nextRange, chat.messages.length);
+			restoreMessageScrollAnchor(anchor, list, scroll);
+			scroll.style.overflowAnchor = "";
+			scroll.style.scrollBehavior = previousScrollBehavior;
+			setActiveDay(chat.messages[anchor?.index ?? nextRange.start]?.dateLabel);
+			isShiftingMessageWindow = false;
 		}
 
 		function renderMessage(chat, message) {
